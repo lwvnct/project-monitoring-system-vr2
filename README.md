@@ -1,6 +1,3 @@
-Here’s a simple **README.md** template for your project that you can use for your GitHub repository:
-
----
 
 # Project Monitoring System
 
@@ -52,12 +49,4 @@ npm install
   npm start
   ```
 
-## Contributing
-Feel free to fork the repository, open issues, and submit pull requests. Contributions are welcome!
 
-## License
-This project is licensed under the MIT License.
-
----
-
-This README gives an overview of your project, setup instructions, and how others can contribute. Let me know if you'd like to adjust anything!
