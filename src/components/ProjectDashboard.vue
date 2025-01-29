@@ -77,7 +77,7 @@
 
 <script>
 export default {
-  name: 'Dashboard',
+  name: "ProjectDashboard",
   data() {
     return {
       search: "",
