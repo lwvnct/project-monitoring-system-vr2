@@ -1,16 +1,17 @@
 import Vue from 'vue';
 import Router from 'vue-router';
-import Dashboard from '../components/Dashboard.vue';
+import SampleDashboard from '../components/SampleDashboard.vue';
 import ProjectDashboard from '../components/ProjectDashboard.vue';
 
 Vue.use(Router);
 
 export default new Router({
+  mode: 'history', // Optional: Use history mode for cleaner URLs
   routes: [
     {
       path: '/',
-      name: 'Dashboard',
-      component: Dashboard
+      name: 'SampleDashboard',
+      component: SampleDashboard
     },
     {
       path: '/project-dashboard',
