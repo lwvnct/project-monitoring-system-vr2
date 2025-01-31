@@ -23,9 +23,9 @@
         lg="3"
         class="pa-2"
       >
-        <v-card class="mx-auto project-card ms-5" elevation="2">
-          <v-card-title class="subtitle-1 font-weight-bold">{{ project.projectName }}</v-card-title>
-          <v-card-subtitle>{{ project.projectLocation }}</v-card-subtitle>
+        <v-card class="mx-auto project-card" elevation="2">
+          
+          <v-card-subtitle class="subtitle-1 font-weight-bold">{{ project.projectLocation }}</v-card-subtitle>
           <v-card-text>
             <v-chip color="blue" text-color="white" small class="mb-2">
               {{ project.projectName }}
@@ -96,33 +96,45 @@ export default {
       return this.projects.filter(project => 
         project.projectName.toLowerCase().includes(searchLower) ||
         project.projectLocation.toLowerCase().includes(searchLower) ||
-        project.sourceOfFund.toLowerCase().includes(searchLower)
+        (project.sourceOfFund && project.sourceOfFund.toLowerCase().includes(searchLower))
       );
     }
   },
   methods: {
     async fetchProjects() {
       try {
-        const response = await fetch("http://localhost:1337/api/header-per-project-sections?populate=*");
-        const data = await response.json();
+        const response = await fetch("http://localhost:1337/api/projects");
+        const projectData = await response.json();
         
-        this.projects = data.data.map(section => {
-          const project = section.project;
-          const totalWtPercent = section.project_item_modifieds.reduce((sum, item) => sum + item.wt_percent, 0);
+        let projects = projectData.data.map(project => ({
+          documentId: project.documentId,
+          projectName: project.projectName,
+          projectLocation: project.projectLocation,
+          startDate: project.startDate,
+          dueDate: project.dueDate,
+          sourceOfFund: project.sourceOfFund || '',
+          totalProjectAmount: project.totalProjectAmount,
+          projectDuration: project.projectDuration,
+          progress: 0,
+          showMore: false
+        }));
+        
+        try {
+          const response2 = await fetch("http://localhost:1337/api/header-per-project-sections?populate=*");
+          const sectionData = await response2.json();
           
-          return {
-            documentId: project.documentId,
-            projectName: project.projectName,
-            projectLocation: project.projectLocation,
-            startDate: project.startDate,
-            dueDate: project.dueDate,
-            sourceOfFund: project.sourceOfFund,
-            totalProjectAmount: project.totalProjectAmount,
-            projectDuration: project.projectDuration,
-            progress: totalWtPercent,
-            showMore: false
-          };
-        });
+          sectionData.data.forEach(section => {
+            const projectIndex = projects.findIndex(p => p.documentId === section.project.documentId);
+            if (projectIndex !== -1) {
+              const totalWtPercent = section.project_item_modifieds?.reduce((sum, item) => sum + (item.wt_percent || 0), 0) || 0;
+              projects[projectIndex].progress = totalWtPercent;
+            }
+          });
+        } catch (error) {
+          console.warn("Error fetching project sections, proceeding without progress data:", error);
+        }
+        
+        this.projects = projects;
       } catch (error) {
         console.error("Error fetching projects:", error);
       }
