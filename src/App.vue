@@ -22,9 +22,9 @@
           <v-icon left>mdi-view-dashboard</v-icon>
           Dashboard
         </v-btn>
-        <v-btn text class="button-style" to="/projects">
+        <v-btn text class="button-style" to="/project-dashboard">
           <v-icon left>mdi-folder-multiple</v-icon>
-          Projects
+          Create Projects
         </v-btn>
         <v-btn text class="button-style" to="/reports">
           <v-icon left>mdi-file-chart</v-icon>
@@ -88,11 +88,11 @@
             </v-list-item-icon>
             <v-list-item-title>Dashboard</v-list-item-title>
           </v-list-item>
-          <v-list-item to="/projects">
+          <v-list-item to="/project-dashboard">
             <v-list-item-icon>
               <v-icon>mdi-folder-multiple</v-icon>
             </v-list-item-icon>
-            <v-list-item-title>Projects</v-list-item-title>
+            <v-list-item-title>Create Projects</v-list-item-title>
           </v-list-item>
           <v-list-item to="/reports">
             <v-list-item-icon>
@@ -105,11 +105,11 @@
     </v-navigation-drawer>
 
     <!-- Main Content Area -->
-    <v-main>
+    <v-main class="app">
       <router-view></router-view>
     </v-main>
 
-    <!-- Your Footer -->
+    <!-- Footer -->
     <v-footer app>
       <v-col class="text-center">
         &copy; {{ new Date().getFullYear() }} Project Monitoring System. All Rights Reserved.
@@ -165,5 +165,15 @@ export default {
   .title-style {
     font-size: 1rem;
   }
+}
+
+/* Background Image Blended with Background Color */
+.app {
+  background-color: #e7efe7;
+  background-image: url('@/assets/caraga-state-university bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  /* background-blend-mode: overlay; Blends the image with the color */ 
 }
 </style>

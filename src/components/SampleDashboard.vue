@@ -10,6 +10,7 @@
           outlined
           dense
           hide-details
+          style="background-color: white; border-radius: 4px;"
         ></v-text-field>
       </v-col>
     </v-row>
@@ -24,8 +25,9 @@
         class="pa-2"
       >
         <v-card class="mx-auto project-card" elevation="2">
-          
-          <v-card-subtitle class="subtitle-1 font-weight-bold">{{ project.projectLocation }}</v-card-subtitle>
+          <v-card-subtitle class="subtitle-1 font-weight-bold">
+            {{ project.projectLocation }}
+          </v-card-subtitle>
           <v-card-text>
             <v-chip color="blue" text-color="white" small class="mb-2">
               {{ project.projectName }}
@@ -36,7 +38,9 @@
                   <v-icon small>mdi-calendar-start</v-icon>
                 </v-list-item-icon>
                 <v-list-item-content>
-                  <v-list-item-subtitle>Start: {{ formatDate(project.startDate) }}</v-list-item-subtitle>
+                  <v-list-item-subtitle>
+                    Start: {{ formatDate(project.startDate) }}
+                  </v-list-item-subtitle>
                 </v-list-item-content>
               </v-list-item>
               <v-list-item>
@@ -44,7 +48,9 @@
                   <v-icon small>mdi-calendar-end</v-icon>
                 </v-list-item-icon>
                 <v-list-item-content>
-                  <v-list-item-subtitle>Due: {{ formatDate(project.dueDate) }}</v-list-item-subtitle>
+                  <v-list-item-subtitle>
+                    Due: {{ formatDate(project.dueDate) }}
+                  </v-list-item-subtitle>
                 </v-list-item-content>
               </v-list-item>
             </v-list>
@@ -63,14 +69,19 @@
             <v-btn color="primary" text small>View Details</v-btn>
             <v-spacer></v-spacer>
             <v-btn icon small @click="project.showMore = !project.showMore">
-              <v-icon>{{ project.showMore ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
+              <v-icon>
+                {{ project.showMore ? 'mdi-chevron-up' : 'mdi-chevron-down' }}
+              </v-icon>
             </v-btn>
           </v-card-actions>
           <v-expand-transition>
             <div v-show="project.showMore">
               <v-divider></v-divider>
               <v-card-text class="text-caption">
-                <p>Project Budget: ${{ project.totalProjectAmount.toLocaleString() }}</p>
+                <p>
+                  Project Budget:
+                  ${{ project.totalProjectAmount.toLocaleString() }}
+                </p>
                 <p>Project Duration: {{ project.projectDuration }} days</p>
               </v-card-text>
             </div>
@@ -82,6 +93,8 @@
 </template>
 
 <script>
+import axios from 'axios';
+
 export default {
   name: 'SampleDashboard',
   data() {
@@ -93,7 +106,7 @@ export default {
   computed: {
     filteredProjects() {
       const searchLower = this.search.toLowerCase();
-      return this.projects.filter(project => 
+      return this.projects.filter(project =>
         project.projectName.toLowerCase().includes(searchLower) ||
         project.projectLocation.toLowerCase().includes(searchLower) ||
         (project.sourceOfFund && project.sourceOfFund.toLowerCase().includes(searchLower))
@@ -103,10 +116,9 @@ export default {
   methods: {
     async fetchProjects() {
       try {
-        const response = await fetch("http://localhost:1337/api/projects");
-        const projectData = await response.json();
-        
-        let projects = projectData.data.map(project => ({
+        // Fetch the projects data using Axios
+        const projectsResponse = await axios.get('http://localhost:1337/api/projects');
+        let projects = projectsResponse.data.data.map(project => ({
           documentId: project.documentId,
           projectName: project.projectName,
           projectLocation: project.projectLocation,
@@ -118,22 +130,30 @@ export default {
           progress: 0,
           showMore: false
         }));
-        
+
+        // Fetch the project sections data using Axios
         try {
-          const response2 = await fetch("http://localhost:1337/api/header-per-project-sections?populate=*");
-          const sectionData = await response2.json();
-          
-          sectionData.data.forEach(section => {
-            const projectIndex = projects.findIndex(p => p.documentId === section.project.documentId);
+          const sectionsResponse = await axios.get(
+            'http://localhost:1337/api/header-per-project-sections?populate=*'
+          );
+          const sectionsData = sectionsResponse.data.data;
+          sectionsData.forEach(section => {
+            const projectIndex = projects.findIndex(
+              p => p.documentId === section.project.documentId
+            );
             if (projectIndex !== -1) {
-              const totalWtPercent = section.project_item_modifieds?.reduce((sum, item) => sum + (item.wt_percent || 0), 0) || 0;
+              const totalWtPercent =
+                section.project_item_modifieds?.reduce(
+                  (sum, item) => sum + (item.wt_percent || 0),
+                  0
+                ) || 0;
               projects[projectIndex].progress = totalWtPercent;
             }
           });
         } catch (error) {
           console.warn("Error fetching project sections, proceeding without progress data:", error);
         }
-        
+
         this.projects = projects;
       } catch (error) {
         console.error("Error fetching projects:", error);
