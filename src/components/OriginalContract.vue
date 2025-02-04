@@ -126,10 +126,18 @@
             return;
           }
   
-          const itemData = { data: this.projectItem };
+          const itemDataForFirstAPI = { data: this.projectItem };
   
-          await axios.post("http://localhost:1337/api/project-items", itemData);
-          await axios.post("http://localhost:1337/api/project-item-modifieds", itemData);
+          const itemDataForSecondAPI = {
+            data: {
+              ...this.projectItem,
+              header_per_project_section: this.sectionId // Ensures the relation is included
+            }
+          };
+          delete itemDataForSecondAPI.data.wt_percent; // Remove wt_percent for the second API
+  
+          await axios.post("http://localhost:1337/api/project-items", itemDataForFirstAPI);
+          await axios.post("http://localhost:1337/api/project-item-modifieds", itemDataForSecondAPI);
   
           alert("Project Item submitted successfully!");
         } catch (error) {
@@ -209,3 +217,4 @@
     border-radius: 5px;
   }
   </style>
+  
