@@ -29,7 +29,7 @@
 </template>
 
 <script>
-import axios from 'axios';
+import axios from "axios";
 
 export default {
   data() {
@@ -41,8 +41,8 @@ export default {
         projectDuration: null,
         sourceOfFund: "",
         startDate: "",
-        dueDate: ""
-      }
+        dueDate: "",
+      },
     };
   },
   methods: {
@@ -63,21 +63,36 @@ export default {
 
         const projectData = {
           ...this.project,
-          actualCompletionDate: "2024-12-15"
+          actualCompletionDate: "2024-12-15",
         };
 
-        // Create the project
+        // Create the project in the first API
         const response = await axios.post("http://localhost:1337/api/projects", {
-          data: projectData
+          data: projectData,
         });
 
         console.log("Project created:", response.data);
 
+        // Store the same data in the second API
+        await axios.post("http://localhost:1337/api/project-with-modified-datas", {
+          data: {
+            projectName: this.project.projectName,
+            projectLocation: this.project.projectLocation,
+            totalProjectAmount: this.project.totalProjectAmount,
+            projectDuration: this.project.projectDuration,
+            sourceOfFund: this.project.sourceOfFund,
+            startDate: this.project.startDate,
+            dueDate: this.project.dueDate,
+          },
+        });
+
+        console.log("Data also stored in second API");
+
         // Get the newly created project ID
         const projectId = response.data.data.id;
-        
+
         // Redirect to the next page and pass the projectId to store the labels
-        this.$router.push({ name: 'OriginalContract', query: { projectId } });
+        this.$router.push({ name: "OriginalContract", query: { projectId } });
 
         alert("Project submitted successfully!");
       } catch (error) {
@@ -101,8 +116,8 @@ export default {
     formatDate(dateString) {
       const date = new Date(dateString);
       return date.toISOString().split("T")[0];
-    }
-  }
+    },
+  },
 };
 </script>
 
