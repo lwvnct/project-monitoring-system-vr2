@@ -75,15 +75,7 @@ export default {
 
         // Store the same data in the second API
         await axios.post("http://localhost:1337/api/project-with-modified-datas", {
-          data: {
-            projectName: this.project.projectName,
-            projectLocation: this.project.projectLocation,
-            totalProjectAmount: this.project.totalProjectAmount,
-            projectDuration: this.project.projectDuration,
-            sourceOfFund: this.project.sourceOfFund,
-            startDate: this.project.startDate,
-            dueDate: this.project.dueDate,
-          },
+          data: projectData,
         });
 
         console.log("Data also stored in second API");
