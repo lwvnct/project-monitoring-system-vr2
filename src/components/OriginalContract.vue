@@ -83,7 +83,7 @@ export default {
         project_with_modified_datum: null,
       },
       projectItem: {
-        itemNo: "",
+        itemno: "",
         subDescription: "",
         quantity: null,
         unit: "",
