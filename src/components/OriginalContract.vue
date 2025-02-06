@@ -39,7 +39,7 @@
   
             <div class="form-group">
               <label for="quantity">Quantity</label>
-              <input v-model.number="projectItem.quantity" id="quantity" type="number" required :disabled="!sectionId" />
+              <input v-model.number="projectItem.quantity" id="quantity" type="number" step="0.01" required :disabled="!sectionId" />
             </div>
   
             <div class="form-group">
