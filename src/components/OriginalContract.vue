@@ -18,52 +18,52 @@
       </form>
     </div>
 
-    <!-- Second Form: Project Items -->
-    <div class="form-container">
-      <h2>Project Item Details</h2>
-      <form @submit.prevent="submitProjectItem">
-        <div v-if="!sectionId" class="alert">
-          <p><strong>Note:</strong> Please submit the Project Section first.</p>
-        </div>
-
-        <div class="form-fields">
-          <div class="form-group">
-            <label for="itemno">Item Number</label>
-            <input v-model="projectItem.itemno" id="itemno" type="text" required :disabled="!sectionId" />
+  <!-- Second Form: Project Items -->
+      <div class="form-container">
+        <h2>Project Item Details</h2>
+        <form @submit.prevent="submitProjectItem">
+          <div v-if="!sectionId" class="alert">
+            <p><strong>Note:</strong> Please submit the Project Section first.</p>
           </div>
-
-          <div class="form-group">
-            <label for="subDescription">Sub Description</label>
-            <input v-model="projectItem.subDescription" id="subDescription" type="text" required :disabled="!sectionId" />
+  
+          <div class="form-fields">
+            <div class="form-group">
+              <label for="itemno">Item Number</label>
+              <input v-model="projectItem.itemno" id="itemno" type="text" required :disabled="!sectionId" />
+            </div>
+  
+            <div class="form-group">
+              <label for="subDescription">Sub Description</label>
+              <input v-model="projectItem.subDescription" id="subDescription" type="text" required :disabled="!sectionId" />
+            </div>
+  
+            <div class="form-group">
+              <label for="quantity">Quantity</label>
+              <input v-model.number="projectItem.quantity" id="quantity" type="number" required :disabled="!sectionId" />
+            </div>
+  
+            <div class="form-group">
+              <label for="unit">Unit</label>
+              <input v-model="projectItem.unit" id="unit" type="text" required :disabled="!sectionId" />
+            </div>
+  
+            <div class="form-group">
+              <label for="unitCost">Unit Cost</label>
+              <input v-model.number="projectItem.unitCost" id="unitCost" type="number" step="0.01" required :disabled="!sectionId" />
+            </div>
+  
+            <div class="form-group">
+              <label for="amount">Amount</label>
+              <input v-model.number="projectItem.amount" id="amount" type="number" step="0.01" required :disabled="!sectionId" />
+            </div>
+  
+            <div class="form-group">
+              <label for="wtPercent">Weight Percent</label>
+              <input v-model.number="projectItem.wt_percent" id="wtPercent" type="number" step="0.01" required :disabled="!sectionId" />
+            </div>
           </div>
-
-          <div class="form-group">
-            <label for="quantity">Quantity</label>
-            <input v-model.number="projectItem.quantity" id="quantity" type="number" required :disabled="!sectionId" />
-          </div>
-
-          <div class="form-group">
-            <label for="unit">Unit</label>
-            <input v-model="projectItem.unit" id="unit" type="text" required :disabled="!sectionId" />
-          </div>
-
-          <div class="form-group">
-            <label for="unitCost">Unit Cost</label>
-            <input v-model.number="projectItem.unitCost" id="unitCost" type="number" step="0.01" required :disabled="!sectionId" />
-          </div>
-
-          <div class="form-group">
-            <label for="amount">Amount</label>
-            <input v-model.number="projectItem.amount" id="amount" type="number" step="0.01" required :disabled="!sectionId" />
-          </div>
-
-          <div class="form-group">
-            <label for="wtPercent">Weight Percent</label>
-            <input v-model.number="projectItem.wt_percent" id="wtPercent" type="number" step="0.01" required :disabled="!sectionId" />
-          </div>
-        </div>
-
-        <button type="submit" class="btn mt-5" :disabled="!sectionId">Submit Item</button>
+  
+          <button type="submit" class="btn mt-5" :disabled="!sectionId">Submit Item</button>
       </form>
     </div>
   </div>
@@ -79,23 +79,31 @@ export default {
       formData: {
         letter_label_for_item_no: "",
         mainDescription: "",
-        project: this.$route.query.projectId || ""
+        project: null,
+        project_with_modified_datum: null,
       },
       projectItem: {
-        itemno: "",
+        itemNo: "",
         subDescription: "",
         quantity: null,
         unit: "",
         unitCost: null,
         amount: null,
         wt_percent: null,
-        header_per_project_section: null
+        header_per_project_section: null,
       },
-      sectionId: null
+      sectionId: null,
     };
   },
-  async created() {
-    if (!this.formData.project) {
+  created() {
+    // Extract projectId and secondprojectId from the URL
+    this.formData.project = Number(this.$route.query.projectId) || null;
+    this.formData.project_with_modified_datum = Number(this.$route.query.secondprojectId) || null;
+
+    console.log("Extracted Project ID:", this.formData.project);
+    console.log("Extracted Second Project ID:", this.formData.project_with_modified_datum);
+
+    if (!this.formData.project || !this.formData.project_with_modified_datum) {
       alert("No project ID found.");
       this.$router.push("/");
     }
@@ -103,32 +111,20 @@ export default {
   methods: {
     async submitSection() {
       try {
-        // Create the project section (label) first
+        console.log("Submitting section with:", this.formData);
+
         const sectionResponse = await axios.post(
-          "http://localhost:1337/api/header-per-project-sections",
+          "http://localhost:1337/api/header-per-project-sections?populate=*",
           {
-            data: this.formData
+            data: this.formData,
           }
         );
-        console.log("Section created:", sectionResponse.data);
 
-        // Store the returned section ID and assign to projectItem relation
+        console.log("Section created:", sectionResponse.data);
         this.sectionId = sectionResponse.data.data.id;
         this.projectItem.header_per_project_section = this.sectionId;
 
-        // Now update the project-with-modified-datas record to include this section
-        // We assume that the project record's id is available in formData.project
-        await axios.patch(
-          `http://localhost:1337/api/project-with-modified-datas/${this.formData.project}`,
-          {
-            data: {
-              // If more than one header is allowed, you might first fetch the existing array and merge.
-              header_per_project_sections: [this.sectionId]
-            }
-          }
-        );
-
-        alert("Project Section submitted and linked successfully!");
+        alert("Project Section submitted successfully!");
       } catch (error) {
         console.error("Error submitting section:", error.response?.data || error);
         alert("Failed to submit project section.");
@@ -143,15 +139,14 @@ export default {
         }
 
         const itemDataForFirstAPI = { data: this.projectItem };
-
         const itemDataForSecondAPI = {
           data: {
             ...this.projectItem,
-            header_per_project_section: this.sectionId // Ensures the relation is included
-          }
+            header_per_project_section: this.sectionId,
+          },
         };
-        // Remove wt_percent for the second API as required
-        delete itemDataForSecondAPI.data.wt_percent;
+
+        delete itemDataForSecondAPI.data.wt_percent; // Remove wt_percent for the second API
 
         await axios.post("http://localhost:1337/api/project-items", itemDataForFirstAPI);
         await axios.post("http://localhost:1337/api/project-item-modifieds", itemDataForSecondAPI);
@@ -161,8 +156,8 @@ export default {
         console.error("Error submitting project item:", error.response?.data || error);
         alert("Failed to submit project item.");
       }
-    }
-  }
+    },
+  },
 };
 </script>
 

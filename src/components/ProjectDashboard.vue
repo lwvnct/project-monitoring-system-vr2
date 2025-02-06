@@ -63,7 +63,7 @@ export default {
 
         const projectData = {
           ...this.project,
-          actualCompletionDate: "2024-12-15",
+          
         };
 
         // Create the project in the first API
@@ -74,7 +74,7 @@ export default {
         console.log("Project created:", response.data);
 
         // Store the same data in the second API
-        await axios.post("http://localhost:1337/api/project-with-modified-datas", {
+        const secondResponse = await axios.post("http://localhost:1337/api/project-with-modified-datas", {
           data: projectData,
         });
 
@@ -82,9 +82,10 @@ export default {
 
         // Get the newly created project ID
         const projectId = response.data.data.id;
+        const secondprojectId = secondResponse.data.data.id;
 
         // Redirect to the next page and pass the projectId to store the labels
-        this.$router.push({ name: "OriginalContract", query: { projectId } });
+        this.$router.push({ name: "OriginalContract", query: { projectId, secondprojectId } });
 
         alert("Project submitted successfully!");
       } catch (error) {
