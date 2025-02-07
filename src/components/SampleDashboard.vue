@@ -66,26 +66,29 @@
             </v-progress-linear>
           </v-card-text>
           <v-card-actions>
-            <v-btn color="primary" text small>View Details</v-btn>
+            <!-- View Details Button (kept) -->
+            <router-link :to="`/project-details/${project.documentId}`" class="icon-button">
+              <v-btn color="primary" text small>View Details</v-btn>
+            </router-link>
+
             <v-spacer></v-spacer>
-            <v-btn icon small @click="project.showMore = !project.showMore">
-              <v-icon>
-                {{ project.showMore ? 'mdi-chevron-up' : 'mdi-chevron-down' }}
-              </v-icon>
-            </v-btn>
+
+            <!-- Accomplished Report Icon -->
+            <router-link :to="`/accomplished-report/${project.documentId}`" class="icon-button">
+              <v-btn icon small color="success">
+                <v-icon>mdi-file-check</v-icon>
+              </v-btn>
+            </router-link>
+
+            <!-- Weekly Progress Report Icon -->
+            <router-link :to="`/weekly-progress/${project.documentId}`" class="icon-button">
+              <v-btn icon small color="info">
+                <v-icon>mdi-calendar-clock</v-icon>
+              </v-btn>
+            </router-link>
+
           </v-card-actions>
-          <v-expand-transition>
-            <div v-show="project.showMore">
-              <v-divider></v-divider>
-              <v-card-text class="text-caption">
-                <p>
-                  Project Budget:
-                  ${{ project.totalProjectAmount.toLocaleString() }}
-                </p>
-                <p>Project Duration: {{ project.projectDuration }} days</p>
-              </v-card-text>
-            </div>
-          </v-expand-transition>
+
         </v-card>
       </v-col>
     </v-row>
@@ -116,7 +119,6 @@ export default {
   methods: {
     async fetchProjects() {
       try {
-        // Fetch the project sections data using Axios
         const response = await axios.get('http://localhost:1337/api/header-per-project-sections?populate=*');
         const sectionsData = response.data.data;
         
@@ -137,12 +139,11 @@ export default {
               sourceOfFund: projectData.sourceOfFund || '',
               totalProjectAmount: projectData.totalProjectAmount || 0,
               projectDuration: projectData.projectDuration || 0,
-              progress: 0, // Will be updated with actual wt_percent sum
+              progress: 0,
               showMore: false
             });
           }
 
-          // Accumulate `wt_percent` values **without rounding**
           let totalWtPercent = section.project_item_modifieds?.reduce((sum, item) => sum + (item.wt_percent ?? 0), 0) || 0;
           projectsMap.get(projectName).progress += totalWtPercent;
         });
@@ -193,5 +194,8 @@ export default {
 }
 .v-btn {
   text-transform: none;
+}
+.icon-button {
+  text-decoration: none;
 }
 </style>
