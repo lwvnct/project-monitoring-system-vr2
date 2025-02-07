@@ -61,7 +61,7 @@
               striped
             >
               <template v-slot:default="{ value }">
-                <strong>{{ Math.ceil(value) }}%</strong>
+                <strong>{{ value }}%</strong>
               </template>
             </v-progress-linear>
           </v-card-text>
@@ -137,13 +137,13 @@ export default {
               sourceOfFund: projectData.sourceOfFund || '',
               totalProjectAmount: projectData.totalProjectAmount || 0,
               projectDuration: projectData.projectDuration || 0,
-              progress: 0,
+              progress: 0, // Will be updated with actual wt_percent sum
               showMore: false
             });
           }
 
-          // Accumulate `wt_percent` values
-          let totalWtPercent = section.project_item_modifieds?.reduce((sum, item) => sum + (item.wt_percent || 0), 0) || 0;
+          // Accumulate `wt_percent` values **without rounding**
+          let totalWtPercent = section.project_item_modifieds?.reduce((sum, item) => sum + (item.wt_percent ?? 0), 0) || 0;
           projectsMap.get(projectName).progress += totalWtPercent;
         });
 
@@ -172,9 +172,26 @@ export default {
 <style scoped>
 .project-card {
   transition: all 0.3s ease;
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
 }
 .project-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
+}
+.v-progress-linear {
+  font-size: 14px;
+  font-weight: bold;
+}
+.v-card-text {
+  font-size: 14px;
+}
+.v-list-item-subtitle {
+  color: #555;
+  font-size: 13px;
+}
+.v-btn {
+  text-transform: none;
 }
 </style>
