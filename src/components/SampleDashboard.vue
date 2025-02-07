@@ -116,50 +116,44 @@ export default {
   methods: {
     async fetchProjects() {
       try {
-        // Fetch the projects data using Axios
-        const projectsResponse = await axios.get('http://localhost:1337/api/projects');
-        let projects = projectsResponse.data.data.map(project => ({
-          documentId: project.documentId,
-          projectName: project.projectName,
-          projectLocation: project.projectLocation,
-          startDate: project.startDate,
-          dueDate: project.dueDate,
-          sourceOfFund: project.sourceOfFund || '',
-          totalProjectAmount: project.totalProjectAmount,
-          projectDuration: project.projectDuration,
-          progress: 0,
-          showMore: false
-        }));
-
         // Fetch the project sections data using Axios
-        try {
-          const sectionsResponse = await axios.get(
-            'http://localhost:1337/api/header-per-project-sections?populate=*'
-          );
-          const sectionsData = sectionsResponse.data.data;
-          sectionsData.forEach(section => {
-            const projectIndex = projects.findIndex(
-              p => p.documentId === section.project.documentId
-            );
-            if (projectIndex !== -1) {
-              const totalWtPercent =
-                section.project_item_modifieds?.reduce(
-                  (sum, item) => sum + (item.wt_percent || 0),
-                  0
-                ) || 0;
-              projects[projectIndex].progress = totalWtPercent;
-            }
-          });
-        } catch (error) {
-          console.warn("Error fetching project sections, proceeding without progress data:", error);
-        }
+        const response = await axios.get('http://localhost:1337/api/header-per-project-sections?populate=*');
+        const sectionsData = response.data.data;
+        
+        let projectsMap = new Map();
 
-        this.projects = projects;
+        sectionsData.forEach(section => {
+          const projectData = section.project;
+          if (!projectData) return;
+
+          const projectName = projectData.projectName;
+          if (!projectsMap.has(projectName)) {
+            projectsMap.set(projectName, {
+              documentId: projectData.documentId,
+              projectName: projectName,
+              projectLocation: projectData.projectLocation || "Unknown",
+              startDate: projectData.startDate || null,
+              dueDate: projectData.dueDate || null,
+              sourceOfFund: projectData.sourceOfFund || '',
+              totalProjectAmount: projectData.totalProjectAmount || 0,
+              projectDuration: projectData.projectDuration || 0,
+              progress: 0,
+              showMore: false
+            });
+          }
+
+          // Accumulate `wt_percent` values
+          let totalWtPercent = section.project_item_modifieds?.reduce((sum, item) => sum + (item.wt_percent || 0), 0) || 0;
+          projectsMap.get(projectName).progress += totalWtPercent;
+        });
+
+        this.projects = Array.from(projectsMap.values());
       } catch (error) {
         console.error("Error fetching projects:", error);
       }
     },
     formatDate(dateString) {
+      if (!dateString) return "N/A";
       const options = { year: 'numeric', month: 'short', day: 'numeric' };
       return new Date(dateString).toLocaleDateString(undefined, options);
     },

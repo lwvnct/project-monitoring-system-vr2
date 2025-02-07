@@ -1,10 +1,5 @@
 <template>
   <div class="form-container-wrapper">
-    <!-- Routing Buttons Container -->
-    <div class="routing-buttons me-15">
-      <router-link to="/route1" class="btn btn-secondary">Create Work Accomplished Report</router-link>
-      <router-link to="/route2" class="btn btn-secondary">Create Weekly Report</router-link>
-    </div>
 
     <!-- Form Container -->
     <div class="form-container mt-5 ms-5">
@@ -118,8 +113,9 @@ export default {
 /* Wrapper for positioning the form and buttons */
 .form-container-wrapper {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   max-width: 900px;
+  margin: 0 auto;
 }
 
 /* Routing buttons styling */
