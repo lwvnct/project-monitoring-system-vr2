@@ -4,6 +4,7 @@ import SampleDashboard from '../components/SampleDashboard.vue';
 import ProjectDashboard from '../components/ProjectDashboard.vue';
 import OriginalContract from '../components/OriginalContract.vue';
 import ProjectDetails from '../components/ProjectDetails.vue';
+import WorkAccomplished from '@/components/WorkAccomplished.vue';
 
 Vue.use(Router);
 
@@ -29,6 +30,11 @@ export default new Router({
       path: '/project-details/:documentId',
       name: 'ProjectDetails',
       component: ProjectDetails
+    },
+    {
+      path: '/work-accomplished/:documentId',
+      name: 'WorkAccomplished',
+      component: WorkAccomplished
     },
     // Add other routes as necessary
   ]

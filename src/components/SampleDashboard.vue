@@ -74,7 +74,7 @@
             <v-spacer></v-spacer>
 
             <!-- Accomplished Report Icon -->
-            <router-link :to="`/accomplished-report/${project.documentId}`" class="icon-button">
+            <router-link :to="`/work-accomplished/${project.documentId}`" class="icon-button">
               <v-btn icon small color="success">
                 <v-icon>mdi-file-check</v-icon>
               </v-btn>

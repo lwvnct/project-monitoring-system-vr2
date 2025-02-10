@@ -21,41 +21,68 @@
         </tr>
       </thead>
       <tbody>
+        <!-- Removed :key from the template element -->
         <template v-for="section in sections">
           <tr :key="'section-' + section.id">
-            <td colspan="14" class="font-weight-bold">{{ section.letter_label_for_item_no }}</td>
+            <td colspan="14" class="font-weight-bold">
+              {{ section.letter_label_for_item_no }}
+            </td>
           </tr>
           <tr :key="'desc-' + section.id">
-            <td colspan="14" class="font-italic">{{ section.mainDescription }}</td>
+            <td colspan="14" class="font-italic">
+              {{ section.mainDescription }}
+            </td>
           </tr>
           <tr v-for="item in section.items" :key="'item-' + item.id">
             <td>{{ item.itemno }}</td>
             <td>{{ item.subDescription }}</td>
             <td>{{ item.quantity }}</td>
             <td>{{ item.unit }}</td>
-            <td>{{ item.unitCost ? item.unitCost.toFixed(2) : '-' }}</td>
-            <td>{{ item.amount ? item.amount.toFixed(2) : '-' }}</td>
-            <td>{{ item.wt_percent ? item.wt_percent.toFixed(2) : '-' }}</td>
+            <td>
+              {{ item.unitCost ? parseFloat(item.unitCost).toFixed(2) : '-' }}
+            </td>
+            <td>
+              {{ item.amount ? parseFloat(item.amount).toFixed(2) : '-' }}
+            </td>
+            <td>
+              {{ item.wt_percent ? parseFloat(item.wt_percent).toFixed(2) : '-' }}
+            </td>
             
-            <!-- "Previous QTY" remains the same -->
-            <td>{{ (parseFloat(item.quantity) - getPreviousQty(section.id, item.itemno)) }}</td>
+            <!-- "Previous QTY" is the difference between the original quantity and the modified quantity -->
+            <td>
+              {{ (parseFloat(item.quantity) - getPreviousQty(section.id, item.itemno)) }}
+            </td>
 
-            <!-- "Previous AMOUNT" now calculated as Previous QTY * UNIT COST -->
+            <!-- "Previous AMOUNT" calculated by the helper method -->
             <td>{{ calculatePreviousAmount(section.id, item).toFixed(2) }}</td>
 
-            <!-- "Remaining QUANTITY" remains the same -->
+            <!-- "Remaining QUANTITY" shows the modified quantity -->
             <td>{{ getPreviousQty(section.id, item.itemno) }}</td>
 
-            <!-- Fixed "TOTAL AMOUNT" calculation -->
-            <td>{{ calculateTotalAmount(section.id, item).toFixed(2) }}</td>
+            <!-- Updated "TOTAL AMOUNT": UNIT COST * Previous QTY -->
+            <td>
+              {{
+                (
+                  (parseFloat(item.quantity) - getPreviousQty(section.id, item.itemno)) *
+                  parseFloat(item.unitCost || 0)
+                ).toFixed(2)
+              }}
+            </td>
 
-            <!-- New "BALANCE" calculation: AMOUNT - TOTAL AMOUNT -->
-            <td>{{ (parseFloat(item.amount || 0) - calculateTotalAmount(section.id, item)).toFixed(2) }}</td>
+            <!-- "BALANCE" remains the same -->
+            <td>
+              {{
+                (
+                  parseFloat(item.amount || 0) -
+                  parseFloat(calculatePreviousAmount(section.id, item))
+                ).toFixed(2)
+              }}
+            </td>
 
-            <!-- Fixed "Previous Percentage" -->
+            <!-- "Previous Percentage" remains the same -->
             <td>{{ getPreviousPercentage(section.id, item.itemno) }}</td>
 
-            <!-- Fixed "Total" (same as Previous Percentage) -->
+            <!-- "Total" remains the same -->
             <td>{{ getPreviousPercentage(section.id, item.itemno) }}</td>
           </tr>
         </template>
@@ -89,11 +116,14 @@ export default {
       }
     },
 
+    // Returns the modified quantity for an item, if available.
     getPreviousQty(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
       if (!section || !section.project_item_modifieds) return 0;
 
-      const modifiedItem = section.project_item_modifieds.find(modItem => modItem.itemno === itemno);
+      const modifiedItem = section.project_item_modifieds.find(
+        modItem => modItem.itemno === itemno
+      );
       return modifiedItem ? parseFloat(modifiedItem.quantity) || 0 : 0;
     },
 
@@ -101,30 +131,30 @@ export default {
     calculatePreviousAmount(sectionId, item) {
       const previousQty = parseFloat(item.quantity) - this.getPreviousQty(sectionId, item.itemno);
       const unitCost = parseFloat(item.unitCost) || 0;
-      return parseFloat(previousQty * unitCost); // Ensure the result is a number
-    },
-
-    // Calculate TOTAL AMOUNT as AMOUNT + Previous AMOUNT
-    calculateTotalAmount(sectionId, item) {
-      return parseFloat(item.amount || 0) + this.calculatePreviousAmount(sectionId, item);
+      return previousQty * unitCost;
     },
 
     getPreviousPercentage(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
       if (!section || !section.project_item_modifieds) return '-';
 
-      const modifiedItem = section.project_item_modifieds.find(modItem => modItem.itemno === itemno);
-      return modifiedItem && modifiedItem.wt_percent ? modifiedItem.wt_percent.toFixed(2) : '-';
-    }
+      const modifiedItem = section.project_item_modifieds.find(
+        modItem => modItem.itemno === itemno
+      );
+      return modifiedItem && modifiedItem.wt_percent
+        ? parseFloat(modifiedItem.wt_percent).toFixed(2)
+        : '-';
+    },
   },
   mounted() {
     this.fetchData();
-  }
+  },
 };
 </script>
 
 <style scoped>
-th, td {
+th,
+td {
   padding: 8px;
   text-align: center;
 }
