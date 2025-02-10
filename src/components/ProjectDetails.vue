@@ -37,20 +37,20 @@
             <td>{{ item.amount ? item.amount.toFixed(2) : '-' }}</td>
             <td>{{ item.wt_percent ? item.wt_percent.toFixed(2) : '-' }}</td>
             
-            <!-- Corrected "Previous QTY" fetching -->
-            <td>{{ getPreviousQty(section.id, item.itemno) }}</td>
-
-            <!-- Corrected "Previous AMOUNT" fetching -->
-            <td>{{ getPreviousAmount(section.id, item.itemno).toFixed(2) }}</td>
-
-            <!-- Fixed "Remaining QTY" calculation -->
+            <!-- "Previous QTY" remains the same -->
             <td>{{ (parseFloat(item.quantity) - getPreviousQty(section.id, item.itemno)) }}</td>
 
-            <!-- Fixed "TOTAL AMOUNT" calculation -->
-            <td>{{ (parseFloat(item.amount || 0) + getPreviousAmount(section.id, item.itemno)).toFixed(2) }}</td>
+            <!-- "Previous AMOUNT" now calculated as Previous QTY * UNIT COST -->
+            <td>{{ calculatePreviousAmount(section.id, item).toFixed(2) }}</td>
 
-            <!-- Fixed "BALANCE" calculation -->
-            <td>{{ (parseFloat(item.amount || 0) - getPreviousAmount(section.id, item.itemno)).toFixed(2) }}</td>
+            <!-- "Remaining QUANTITY" remains the same -->
+            <td>{{ getPreviousQty(section.id, item.itemno) }}</td>
+
+            <!-- Fixed "TOTAL AMOUNT" calculation -->
+            <td>{{ calculateTotalAmount(section.id, item).toFixed(2) }}</td>
+
+            <!-- New "BALANCE" calculation: AMOUNT - TOTAL AMOUNT -->
+            <td>{{ (parseFloat(item.amount || 0) - calculateTotalAmount(section.id, item)).toFixed(2) }}</td>
 
             <!-- Fixed "Previous Percentage" -->
             <td>{{ getPreviousPercentage(section.id, item.itemno) }}</td>
@@ -97,12 +97,16 @@ export default {
       return modifiedItem ? parseFloat(modifiedItem.quantity) || 0 : 0;
     },
 
-    getPreviousAmount(sectionId, itemno) {
-      const section = this.sections.find(sec => sec.id === sectionId);
-      if (!section || !section.project_item_modifieds) return 0;
+    // Calculate Previous AMOUNT as Previous QTY * UNIT COST
+    calculatePreviousAmount(sectionId, item) {
+      const previousQty = parseFloat(item.quantity) - this.getPreviousQty(sectionId, item.itemno);
+      const unitCost = parseFloat(item.unitCost) || 0;
+      return parseFloat(previousQty * unitCost); // Ensure the result is a number
+    },
 
-      const modifiedItem = section.project_item_modifieds.find(modItem => modItem.itemno === itemno);
-      return modifiedItem ? parseFloat(modifiedItem.amount) || 0 : 0;
+    // Calculate TOTAL AMOUNT as AMOUNT + Previous AMOUNT
+    calculateTotalAmount(sectionId, item) {
+      return parseFloat(item.amount || 0) + this.calculatePreviousAmount(sectionId, item);
     },
 
     getPreviousPercentage(sectionId, itemno) {
