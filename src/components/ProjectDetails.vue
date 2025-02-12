@@ -155,21 +155,48 @@ export default {
 <style scoped>
 th,
 td {
-  padding: 8px;
+  padding: 4px; /* Reduce padding */
   text-align: center;
+  font-size: 15px; /* Reduce font size */
 }
+
 th {
   background-color: #f4f4f4;
 }
+
 table {
   background-color: #f4f4f4;
-  max-width: 90%;
+  max-width: 90%; /* Reduce width */
+  margin: auto;
+  border-collapse: collapse; /* Reduce spacing between cells */
 }
+
+input {
+  width: 60px; /* Reduce input field width */
+}
+
 .font-weight-bold {
   font-weight: bold;
   background-color: #e0e0e0;
 }
+
 .font-italic {
   font-style: italic;
 }
+
+button {
+  display: block;
+  margin: 10px auto;
+  padding: 8px 16px; /* Adjust button size */
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
 </style>
