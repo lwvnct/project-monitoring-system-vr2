@@ -40,20 +40,14 @@
             <td>{{ formatDecimal(item.unitCost) }}</td>
             <td>{{ formatDecimal(item.amount) }}</td>
             <td>{{ formatDecimal(item.wt_percent) }}</td>
-
-            <td>{{ formatDecimal(parseFloat(item.quantity) - getPreviousQty(section.id, item.itemno)) }}</td>
-            <td>{{ formatDecimal(calculatePreviousAmount(section.id, item)) }}</td>
+            <!-- Previous QTY from P_EnteredQuantity -->
             <td>{{ formatDecimal(getPreviousQty(section.id, item.itemno)) }}</td>
-
-            <td>
-              {{
-                formatDecimal(
-                  (parseFloat(item.quantity) - getPreviousQty(section.id, item.itemno)) *
-                  parseFloat(item.unitCost || 0)
-                )
-              }}
-            </td>
-
+            <!-- Previous AMOUNT as previous qty * unit cost -->
+            <td>{{ formatDecimal(calculatePreviousAmount(section.id, item)) }}</td>
+            <!-- REMAINING QUANTITY now shows the "quantity" from project_item_modifieds -->
+            <td>{{ formatDecimal(getModifiedQuantity(section.id, item.itemno)) }}</td>
+            <!-- TOTAL AMOUNT = modified quantity * unit cost -->
+            <td>{{ formatDecimal(calculatePreviousAmount(section.id, item)) }}</td>
             <td>
               {{
                 formatDecimal(
@@ -61,7 +55,7 @@
                 )
               }}
             </td>
-
+            <!-- PREV PERCENTAGE now displays the value of P_EnteredQuantity -->
             <td>{{ formatDecimal(getPreviousPercentage(section.id, item.itemno)) }}</td>
             <td>{{ formatDecimal(getPreviousPercentage(section.id, item.itemno)) }}</td>
           </tr>
@@ -116,7 +110,7 @@ export default {
     totalTotalAmount() {
       return this.sections.reduce((sum, section) => {
         return sum + section.items.reduce((acc, item) => {
-          return acc + (parseFloat(item.quantity) - this.getPreviousQty(section.id, item.itemno)) * parseFloat(item.unitCost || 0);
+          return acc + this.getModifiedQuantity(section.id, item.itemno) * parseFloat(item.unitCost || 0);
         }, 0);
       }, 0);
     },
@@ -144,35 +138,46 @@ export default {
     getPreviousQty(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
       if (!section || !section.project_item_modifieds) return 0;
-
       const modifiedItem = section.project_item_modifieds.find(
         modItem => modItem.itemno === itemno
       );
+      // Return the value from P_EnteredQuantity
+      return modifiedItem ? parseFloat(modifiedItem.P_EnteredQuantity) || 0 : 0;
+    },
+
+    getModifiedQuantity(sectionId, itemno) {
+      const section = this.sections.find(sec => sec.id === sectionId);
+      if (!section || !section.project_item_modifieds) return 0;
+      const modifiedItem = section.project_item_modifieds.find(
+        modItem => modItem.itemno === itemno
+      );
+      // Return the value of "quantity" from project_item_modifieds
       return modifiedItem ? parseFloat(modifiedItem.quantity) || 0 : 0;
     },
 
     calculatePreviousAmount(sectionId, item) {
-      const previousQty = parseFloat(item.quantity) - this.getPreviousQty(sectionId, item.itemno);
+      // Calculate previous amount using P_EnteredQuantity multiplied by the unit cost
+      const previousQty = this.getPreviousQty(sectionId, item.itemno);
       const unitCost = parseFloat(item.unitCost) || 0;
       return previousQty * unitCost;
     },
 
+    // Updated: Now returns the value of P_EnteredQuantity for the PREV PERCENTAGE column
     getPreviousPercentage(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
       if (!section || !section.project_item_modifieds) return 0;
-
       const modifiedItem = section.project_item_modifieds.find(
         modItem => modItem.itemno === itemno
       );
-      return modifiedItem && modifiedItem.wt_percent
-        ? parseFloat(modifiedItem.wt_percent)
-        : 0;
+      return modifiedItem ? parseFloat(modifiedItem.P_EnteredQuantity) || 0 : 0;
     },
 
     formatDecimal(value) {
-      if (!value) return '0.00';
-      return parseFloat(value)
-        .toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (value === null || value === undefined || isNaN(value)) return '0.00';
+      return parseFloat(value).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
     }
   },
   mounted() {

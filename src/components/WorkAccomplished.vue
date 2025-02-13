@@ -30,33 +30,31 @@
             <td colspan="14" class="font-italic">{{ section.mainDescription }}</td>
           </tr>
           <tr v-for="item in section.items" :key="'item-' + item.id">
-            <!--ITEM NO.-->
+            <!-- ITEM NO. -->
             <td>{{ item.itemno }}</td>
-            <!--DESCRIPTION-->
+            <!-- DESCRIPTION -->
             <td>{{ item.subDescription }}</td>
-            <!--QTY-->
+            <!-- QTY -->
             <td>{{ item.quantity }}</td>
-            <!--UNIT-->
+            <!-- UNIT -->
             <td>{{ item.unit }}</td>
-            <!--UNIT COST-->
+            <!-- UNIT COST -->
             <td>{{ item.unitCost ? parseFloat(item.unitCost).toFixed(2) : '-' }}</td>
-            <!--AMOUNT-->
+            <!-- AMOUNT -->
             <td>{{ item.amount ? parseFloat(item.amount).toFixed(2) : '-' }}</td>
-            <!--WT.%-->
+            <!-- WT.% -->
             <td>{{ item.wt_percent ? parseFloat(item.wt_percent).toFixed(2) : '-' }}</td>
-            <!--ENTER QTY-->
+            <!-- ENTER QTY -->
             <td>
               <input v-model.number="item.enterQty" type="number" min="0" step="0.01" />
             </td>
-            <!--Previous AMOUNT-->
+            <!-- Previous AMOUNT -->
             <td>{{ calculatePreviousAmount(section.id, item).toFixed(2) }}</td>
-            <!--REMAINING QUANTITY-->
+            <!-- REMAINING QUANTITY -->
             <td>
-              {{
-                (parseFloat(item.quantity) - parseFloat(item.enterQty || 0)).toFixed(2)
-              }}
+              {{ (parseFloat(item.quantity) - parseFloat(item.enterQty || 0)).toFixed(2) }}
             </td>
-            <!--TOTAL AMOUNT-->
+            <!-- TOTAL AMOUNT -->
             <td>
               {{
                 (
@@ -65,7 +63,7 @@
                 ).toFixed(2)
               }}
             </td>
-            <!--BALANCE-->
+            <!-- BALANCE -->
             <td>
               {{
                 (
@@ -74,13 +72,13 @@
                 ).toFixed(2)
               }}
             </td>
-            <!--ENTER PERCENTAGE-->
+            <!-- ENTER PERCENTAGE -->
             <td>
               <input v-model.number="item.enterPercentage" type="number" min="0" step="0.01" />
             </td>
-            <!--Previous PERCENTAGE-->
+            <!-- Previous PERCENTAGE -->
             <td>{{ getPreviousPercentage(section.id, item.itemno) }}</td>
-            <!--TOTAL-->
+            <!-- TOTAL -->
             <td>{{ getPreviousPercentage(section.id, item.itemno) }}</td>
           </tr>
         </template>
@@ -106,7 +104,7 @@ export default {
       try {
         const response = await axios.get(
           `http://localhost:1337/api/header-per-project-sections?populate=*` +
-          `&filters[project][documentId][$eq]=${documentId}`
+            `&filters[project][documentId][$eq]=${documentId}`
         );
         if (response.data && response.data.data.length > 0) {
           this.sections = response.data.data;
@@ -133,55 +131,81 @@ export default {
       return modifiedItem && modifiedItem.wt_percent ? parseFloat(modifiedItem.wt_percent).toFixed(2) : '-';
     },
     async submitData() {
-  try {
-    for (const section of this.sections) {
-      for (const item of section.items) {
-        if (item.enterQty !== undefined || item.enterPercentage !== undefined) {
-          const remainingQuantity = parseFloat(item.quantity) - parseFloat(item.enterQty || 0);
+      try {
+        // Loop through each section and its items
+        for (const section of this.sections) {
+          for (const item of section.items) {
+            // Only process if there is new input in either field
+            if (item.enterQty !== undefined || item.enterPercentage !== undefined) {
+              // Check if a modification record already exists for this item
+              const response = await axios.get(
+                `http://localhost:1337/api/project-item-modifieds?filters[header_per_project_section][$eq]=${section.id}&filters[itemno][$eq]=${item.itemno}`
+              );
 
-          // Check if the record already exists
-          const response = await axios.get(
-            `http://localhost:1337/api/project-item-modifieds?filters[header_per_project_section][$eq]=${section.id}&filters[itemno][$eq]=${item.itemno}`
-          );
+              // Convert input values to numbers (defaulting to 0)
+              const inputQty = parseFloat(item.enterQty || 0);
+              const inputWt = parseFloat(item.enterPercentage || 0);
+              const originalQty = parseFloat(item.quantity);
 
-          if (response.data && response.data.data.length > 0) {
-            // If record exists, update using PUT
-            const existingItemId = response.data.data[0].documentId;
-            await axios.put(
-              `http://localhost:1337/api/project-item-modifieds/${existingItemId}`,
-              {
-                data: {
-                  EnteredQuantity: item.enterQty || 0,
-                  wt_percent: item.enterPercentage || 0,
-                  header_per_project_section: section.documentId,
-                  quantity: remainingQuantity, // Update quantity with REMAINING QUANTITY
-                }
+              if (response.data && response.data.data.length > 0) {
+                // If record exists, add the new input to the previous values
+                const modRecord = response.data.data[0];
+                const previousEntered = parseFloat(modRecord.EnteredQuantity) || 0;
+                const previousRemaining = parseFloat(modRecord.quantity) || originalQty;
+                // Delivered quantity so far = original quantity - previous remaining
+                const previousDelivered = originalQty - previousRemaining;
+                // New delivered quantity = previous delivered + new input
+                const newDelivered = previousDelivered + inputQty;
+                // New remaining quantity = original quantity - new delivered quantity
+                const newRemaining = originalQty - newDelivered;
+                // Sum the percentages
+                const previousWt = parseFloat(modRecord.wt_percent) || 0;
+                const newWt = previousWt + inputWt;
+
+                const existingRecordId = modRecord.documentId;
+                await axios.put(
+                  `http://localhost:1337/api/project-item-modifieds/${existingRecordId}`,
+                  {
+                    data: {
+                      EnteredQuantity: previousEntered + inputQty,
+                      wt_percent: newWt,
+                      header_per_project_section: section.documentId,
+                      quantity: newRemaining, // Updated remaining quantity
+                      // Store the current entered values
+                      p_wt_percent: inputWt,
+                      P_EnteredQuantity: inputQty,
+                    }
+                  }
+                );
+              } else {
+                // If no record exists, create a new record using the input values
+                const newEntered = inputQty;
+                const newRemaining = originalQty - newEntered;
+                const newWt = inputWt;
+                await axios.post(
+                  `http://localhost:1337/api/project-item-modifieds`,
+                  {
+                    data: {
+                      EnteredQuantity: newEntered,
+                      wt_percent: newWt,
+                      header_per_project_section: section.documentId,
+                      itemno: item.itemno,
+                      quantity: newRemaining, // Store the remaining quantity
+                      // Store the current entered values
+                      p_wt_percent: inputWt,
+                      P_EnteredQuantity: inputQty,
+                    }
+                  }
+                );
               }
-            );
-          } else {
-            // If record doesn't exist, create using POST
-            await axios.post(
-              `http://localhost:1337/api/project-item-modifieds`,
-              {
-                data: {
-                  EnteredQuantity: item.enterQty || 0,
-                  wt_percent: item.enterPercentage || 0,
-                  header_per_project_section: section.documentId,
-                  itemno: item.itemno,
-                  quantity: remainingQuantity, // Save REMAINING QUANTITY
-                }
-              }
-            );
+            }
           }
         }
+        alert('Data successfully updated!');
+      } catch (error) {
+        console.error('Error submitting data:', error);
       }
     }
-    alert('Data successfully updated!');
-  } catch (error) {
-    console.error('Error submitting data:', error);
-  }
-}
-
   },
   mounted() {
     this.fetchData();
