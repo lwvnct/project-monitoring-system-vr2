@@ -21,7 +21,6 @@
         </tr>
       </thead>
       <tbody>
-        <!-- Removed :key from the template element -->
         <template v-for="section in sections">
           <tr :key="'section-' + section.id">
             <td colspan="14" class="font-weight-bold">
@@ -36,57 +35,54 @@
           <tr v-for="item in section.items" :key="'item-' + item.id">
             <td>{{ item.itemno }}</td>
             <td>{{ item.subDescription }}</td>
-            <td>{{ item.quantity }}</td>
+            <td>{{ formatDecimal(item.quantity) }}</td>
             <td>{{ item.unit }}</td>
-            <td>
-              {{ item.unitCost ? parseFloat(item.unitCost).toFixed(2) : '-' }}
-            </td>
-            <td>
-              {{ item.amount ? parseFloat(item.amount).toFixed(2) : '-' }}
-            </td>
-            <td>
-              {{ item.wt_percent ? parseFloat(item.wt_percent).toFixed(2) : '-' }}
-            </td>
-            
-            <!-- "Previous QTY" is the difference between the original quantity and the modified quantity -->
-            <td>
-              {{ (parseFloat(item.quantity) - getPreviousQty(section.id, item.itemno)) }}
-            </td>
+            <td>{{ formatDecimal(item.unitCost) }}</td>
+            <td>{{ formatDecimal(item.amount) }}</td>
+            <td>{{ formatDecimal(item.wt_percent) }}</td>
 
-            <!-- "Previous AMOUNT" calculated by the helper method -->
-            <td>{{ calculatePreviousAmount(section.id, item).toFixed(2) }}</td>
+            <td>{{ formatDecimal(parseFloat(item.quantity) - getPreviousQty(section.id, item.itemno)) }}</td>
+            <td>{{ formatDecimal(calculatePreviousAmount(section.id, item)) }}</td>
+            <td>{{ formatDecimal(getPreviousQty(section.id, item.itemno)) }}</td>
 
-            <!-- "Remaining QUANTITY" shows the modified quantity -->
-            <td>{{ getPreviousQty(section.id, item.itemno) }}</td>
-
-            <!-- Updated "TOTAL AMOUNT": UNIT COST * Previous QTY -->
             <td>
               {{
-                (
+                formatDecimal(
                   (parseFloat(item.quantity) - getPreviousQty(section.id, item.itemno)) *
                   parseFloat(item.unitCost || 0)
-                ).toFixed(2)
+                )
               }}
             </td>
 
-            <!-- "BALANCE" remains the same -->
             <td>
               {{
-                (
-                  parseFloat(item.amount || 0) -
-                  parseFloat(calculatePreviousAmount(section.id, item))
-                ).toFixed(2)
+                formatDecimal(
+                  parseFloat(item.amount || 0) - parseFloat(calculatePreviousAmount(section.id, item))
+                )
               }}
             </td>
 
-            <!-- "Previous Percentage" remains the same -->
-            <td>{{ getPreviousPercentage(section.id, item.itemno) }}</td>
-
-            <!-- "Total" remains the same -->
-            <td>{{ getPreviousPercentage(section.id, item.itemno) }}</td>
+            <td>{{ formatDecimal(getPreviousPercentage(section.id, item.itemno)) }}</td>
+            <td>{{ formatDecimal(getPreviousPercentage(section.id, item.itemno)) }}</td>
           </tr>
         </template>
       </tbody>
+
+      <!-- TOTAL Row -->
+      <tfoot>
+        <tr class="font-weight-bold bg-light">
+          <td colspan="5">TOTAL</td>
+          <td>{{ formatDecimal(totalAmount) }}</td>
+          <td>{{ formatDecimal(totalWtPercent) }}</td>
+          <td></td>
+          <td>{{ formatDecimal(totalPreviousAmount) }}</td>
+          <td></td>
+          <td>{{ formatDecimal(totalTotalAmount) }}</td>
+          <td></td>
+          <td>{{ formatDecimal(totalPrevPercentage) }}</td>
+          <td>{{ formatDecimal(totalPrevPercentage) }}</td>
+        </tr>
+      </tfoot>
     </table>
   </div>
 </template>
@@ -100,6 +96,35 @@ export default {
     return {
       sections: [],
     };
+  },
+  computed: {
+    totalAmount() {
+      return this.sections.reduce((sum, section) => {
+        return sum + section.items.reduce((acc, item) => acc + parseFloat(item.amount || 0), 0);
+      }, 0);
+    },
+    totalWtPercent() {
+      return this.sections.reduce((sum, section) => {
+        return sum + section.items.reduce((acc, item) => acc + parseFloat(item.wt_percent || 0), 0);
+      }, 0);
+    },
+    totalPreviousAmount() {
+      return this.sections.reduce((sum, section) => {
+        return sum + section.items.reduce((acc, item) => acc + parseFloat(this.calculatePreviousAmount(section.id, item)), 0);
+      }, 0);
+    },
+    totalTotalAmount() {
+      return this.sections.reduce((sum, section) => {
+        return sum + section.items.reduce((acc, item) => {
+          return acc + (parseFloat(item.quantity) - this.getPreviousQty(section.id, item.itemno)) * parseFloat(item.unitCost || 0);
+        }, 0);
+      }, 0);
+    },
+    totalPrevPercentage() {
+      return this.sections.reduce((sum, section) => {
+        return sum + section.items.reduce((acc, item) => acc + parseFloat(this.getPreviousPercentage(section.id, item.itemno)), 0);
+      }, 0);
+    }
   },
   methods: {
     async fetchData() {
@@ -116,7 +141,6 @@ export default {
       }
     },
 
-    // Returns the modified quantity for an item, if available.
     getPreviousQty(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
       if (!section || !section.project_item_modifieds) return 0;
@@ -127,7 +151,6 @@ export default {
       return modifiedItem ? parseFloat(modifiedItem.quantity) || 0 : 0;
     },
 
-    // Calculate Previous AMOUNT as Previous QTY * UNIT COST
     calculatePreviousAmount(sectionId, item) {
       const previousQty = parseFloat(item.quantity) - this.getPreviousQty(sectionId, item.itemno);
       const unitCost = parseFloat(item.unitCost) || 0;
@@ -136,15 +159,21 @@ export default {
 
     getPreviousPercentage(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
-      if (!section || !section.project_item_modifieds) return '-';
+      if (!section || !section.project_item_modifieds) return 0;
 
       const modifiedItem = section.project_item_modifieds.find(
         modItem => modItem.itemno === itemno
       );
       return modifiedItem && modifiedItem.wt_percent
-        ? parseFloat(modifiedItem.wt_percent).toFixed(2)
-        : '-';
+        ? parseFloat(modifiedItem.wt_percent)
+        : 0;
     },
+
+    formatDecimal(value) {
+      if (!value) return '0.00';
+      return parseFloat(value)
+        .toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
   },
   mounted() {
     this.fetchData();
@@ -155,9 +184,9 @@ export default {
 <style scoped>
 th,
 td {
-  padding: 4px; /* Reduce padding */
+  padding: 4px;
   text-align: center;
-  font-size: 15px; /* Reduce font size */
+  font-size: 15px;
 }
 
 th {
@@ -166,13 +195,9 @@ th {
 
 table {
   background-color: #f4f4f4;
-  max-width: 90%; /* Reduce width */
+  max-width: 90%;
   margin: auto;
-  border-collapse: collapse; /* Reduce spacing between cells */
-}
-
-input {
-  width: 60px; /* Reduce input field width */
+  border-collapse: collapse;
 }
 
 .font-weight-bold {
@@ -184,19 +209,7 @@ input {
   font-style: italic;
 }
 
-button {
-  display: block;
-  margin: 10px auto;
-  padding: 8px 16px; /* Adjust button size */
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
+.bg-light {
+  background-color: #f8f9fa;
 }
-
-button:hover {
-  background-color: #0056b3;
-}
-
 </style>

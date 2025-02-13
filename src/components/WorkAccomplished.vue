@@ -30,22 +30,33 @@
             <td colspan="14" class="font-italic">{{ section.mainDescription }}</td>
           </tr>
           <tr v-for="item in section.items" :key="'item-' + item.id">
+            <!--ITEM NO.-->
             <td>{{ item.itemno }}</td>
+            <!--DESCRIPTION-->
             <td>{{ item.subDescription }}</td>
+            <!--QTY-->
             <td>{{ item.quantity }}</td>
+            <!--UNIT-->
             <td>{{ item.unit }}</td>
+            <!--UNIT COST-->
             <td>{{ item.unitCost ? parseFloat(item.unitCost).toFixed(2) : '-' }}</td>
+            <!--AMOUNT-->
             <td>{{ item.amount ? parseFloat(item.amount).toFixed(2) : '-' }}</td>
+            <!--WT.%-->
             <td>{{ item.wt_percent ? parseFloat(item.wt_percent).toFixed(2) : '-' }}</td>
+            <!--ENTER QTY-->
             <td>
               <input v-model.number="item.enterQty" type="number" min="0" step="0.01" />
             </td>
+            <!--Previous AMOUNT-->
             <td>{{ calculatePreviousAmount(section.id, item).toFixed(2) }}</td>
+            <!--REMAINING QUANTITY-->
             <td>
               {{
                 (parseFloat(item.quantity) - parseFloat(item.enterQty || 0)).toFixed(2)
               }}
             </td>
+            <!--TOTAL AMOUNT-->
             <td>
               {{
                 (
@@ -54,6 +65,7 @@
                 ).toFixed(2)
               }}
             </td>
+            <!--BALANCE-->
             <td>
               {{
                 (
@@ -62,10 +74,13 @@
                 ).toFixed(2)
               }}
             </td>
+            <!--ENTER PERCENTAGE-->
             <td>
               <input v-model.number="item.enterPercentage" type="number" min="0" step="0.01" />
             </td>
+            <!--Previous PERCENTAGE-->
             <td>{{ getPreviousPercentage(section.id, item.itemno) }}</td>
+            <!--TOTAL-->
             <td>{{ getPreviousPercentage(section.id, item.itemno) }}</td>
           </tr>
         </template>

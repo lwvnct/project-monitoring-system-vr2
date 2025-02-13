@@ -174,6 +174,6 @@ export default {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-   background-blend-mode: overlay; /*Blends the image with the color */ 
+  background-blend-mode: overlay; /*Blends the image with the color */ 
 }
 </style>
