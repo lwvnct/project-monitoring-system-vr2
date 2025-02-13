@@ -236,13 +236,15 @@ export default {
     }
   },
   mounted() {
-    // Wait for both API calls to finish then update the amounts only once.
+    // Wait for both API calls to finish then update the amounts only once per project.
     Promise.all([this.fetchData(), this.fetchProjectItemModifieds()])
       .then(() => {
-        // Added one-time update flag feature:
-        if (!localStorage.getItem('projectItemModifiedsUpdated')) {
+        const documentId = this.$route.params.documentId;
+        // Use a project-specific flag key based on the documentId.
+        const updateFlagKey = 'projectItemModifiedsUpdated_' + documentId;
+        if (!localStorage.getItem(updateFlagKey)) {
           this.updateProjectItemModifiedAmounts();
-          localStorage.setItem('projectItemModifiedsUpdated', 'true');
+          localStorage.setItem(updateFlagKey, 'true');
         }
       })
       .catch(error => {
