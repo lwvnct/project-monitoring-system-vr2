@@ -48,13 +48,8 @@
             <td>{{ formatDecimal(getModifiedQuantity(section.id, item.itemno)) }}</td>
             <!-- TOTAL AMOUNT = modified quantity * unit cost -->
             <td>{{ formatDecimal(calculatePreviousAmount(section.id, item)) }}</td>
-            <td>
-              {{
-                formatDecimal(
-                  parseFloat(item.amount || 0) - parseFloat(calculatePreviousAmount(section.id, item))
-                )
-              }}
-            </td>
+            <!-- BALANCE now displays the "amount" from project_item_modifieds -->
+            <td>{{ formatDecimal(getModifiedAmount(section.id, item.itemno)) }}</td>
             <!-- PREV PERCENTAGE now displays the value of P_EnteredQuantity -->
             <td>{{ formatDecimal(getPreviousPercentage(section.id, item.itemno)) }}</td>
             <td>{{ formatDecimal(getPreviousPercentage(section.id, item.itemno)) }}</td>
@@ -89,6 +84,8 @@ export default {
   data() {
     return {
       sections: [],
+      // New property to store the API response for previous amounts
+      projectItemModifieds: []
     };
   },
   computed: {
@@ -134,7 +131,17 @@ export default {
         console.error('Error fetching data:', error);
       }
     },
-
+    // New method to fetch the modified items data from the API
+    async fetchProjectItemModifieds() {
+      try {
+        const response = await axios.get("http://localhost:1337/api/project-item-modifieds");
+        if (response.data && response.data.data) {
+          this.projectItemModifieds = response.data.data;
+        }
+      } catch (error) {
+        console.error('Error fetching project item modifieds:', error);
+      }
+    },
     getPreviousQty(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
       if (!section || !section.project_item_modifieds) return 0;
@@ -144,7 +151,6 @@ export default {
       // Return the value from P_EnteredQuantity
       return modifiedItem ? parseFloat(modifiedItem.P_EnteredQuantity) || 0 : 0;
     },
-
     getModifiedQuantity(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
       if (!section || !section.project_item_modifieds) return 0;
@@ -154,15 +160,21 @@ export default {
       // Return the value of "quantity" from project_item_modifieds
       return modifiedItem ? parseFloat(modifiedItem.quantity) || 0 : 0;
     },
-
+    // New method to retrieve the "amount" from project_item_modifieds for the BALANCE column
+    getModifiedAmount(sectionId, itemno) {
+      const section = this.sections.find(sec => sec.id === sectionId);
+      if (!section || !section.project_item_modifieds) return 0;
+      const modifiedItem = section.project_item_modifieds.find(
+        modItem => modItem.itemno === itemno
+      );
+      return modifiedItem ? parseFloat(modifiedItem.amount) || 0 : 0;
+    },
     calculatePreviousAmount(sectionId, item) {
       // Calculate previous amount using P_EnteredQuantity multiplied by the unit cost
       const previousQty = this.getPreviousQty(sectionId, item.itemno);
       const unitCost = parseFloat(item.unitCost) || 0;
       return previousQty * unitCost;
     },
-
-    // Updated: Now returns the value of P_EnteredQuantity for the PREV PERCENTAGE column
     getPreviousPercentage(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
       if (!section || !section.project_item_modifieds) return 0;
@@ -171,7 +183,14 @@ export default {
       );
       return modifiedItem ? parseFloat(modifiedItem.P_EnteredQuantity) || 0 : 0;
     },
-
+    // New method that retrieves the "Previous AMOUNT" from the API data
+    getPreviousAmountFromAPI(sectionId, itemno) {
+      const record = this.projectItemModifieds.find(mod => {
+        // Assuming each record has a 'section' object with an 'id' and an 'itemno' field
+        return mod.section && mod.section.id === sectionId && mod.itemno === itemno;
+      });
+      return record ? parseFloat(record.previous_amount) || 0 : 0;
+    },
     formatDecimal(value) {
       if (value === null || value === undefined || isNaN(value)) return '0.00';
       return parseFloat(value).toLocaleString('en-US', {
@@ -182,6 +201,7 @@ export default {
   },
   mounted() {
     this.fetchData();
+    this.fetchProjectItemModifieds();
   },
 };
 </script>
