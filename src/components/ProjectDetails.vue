@@ -191,13 +191,6 @@ export default {
       });
       return record ? parseFloat(record.previous_amount) || 0 : 0;
     },
-    formatDecimal(value) {
-      if (value === null || value === undefined || isNaN(value)) return '0.00';
-      return parseFloat(value).toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
-    },
     // New method to update the "amount" in project-item-modifieds API
     updateProjectItemModifiedAmounts() {
       this.sections.forEach(section => {
@@ -211,7 +204,7 @@ export default {
             const currentAmount = parseFloat(modifiedItem.amount) || 0;
             const newAmount = currentAmount - previousAmount;
             // Update the local record
-            modifiedItem.amount = newAmount.documentId;
+            modifiedItem.amount = newAmount;
             // Send an API request to update the record's amount
             axios
               .put(`http://localhost:1337/api/project-item-modifieds/${modifiedItem.documentId}`, {
@@ -233,13 +226,24 @@ export default {
           }
         });
       });
+    },
+    formatDecimal(value) {
+      if (value === null || value === undefined || isNaN(value)) return '0.00';
+      return parseFloat(value).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
     }
   },
   mounted() {
-    // Wait for both API calls to finish then update the amounts
+    // Wait for both API calls to finish then update the amounts only once.
     Promise.all([this.fetchData(), this.fetchProjectItemModifieds()])
       .then(() => {
-        this.updateProjectItemModifiedAmounts();
+        // Added one-time update flag feature:
+        if (!localStorage.getItem('projectItemModifiedsUpdated')) {
+          this.updateProjectItemModifiedAmounts();
+          localStorage.setItem('projectItemModifiedsUpdated', 'true');
+        }
       })
       .catch(error => {
         console.error('Error in mounted hook:', error);
