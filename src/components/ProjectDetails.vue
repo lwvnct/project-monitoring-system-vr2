@@ -197,11 +197,53 @@ export default {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       });
+    },
+    // New method to update the "amount" in project-item-modifieds API
+    updateProjectItemModifiedAmounts() {
+      this.sections.forEach(section => {
+        if (!section.project_item_modifieds) return;
+        section.items.forEach(item => {
+          const previousAmount = this.calculatePreviousAmount(section.id, item);
+          const modifiedItem = section.project_item_modifieds.find(
+            modItem => modItem.itemno === item.itemno
+          );
+          if (modifiedItem) {
+            const currentAmount = parseFloat(modifiedItem.amount) || 0;
+            const newAmount = currentAmount - previousAmount;
+            // Update the local record
+            modifiedItem.amount = newAmount.documentId;
+            // Send an API request to update the record's amount
+            axios
+              .put(`http://localhost:1337/api/project-item-modifieds/${modifiedItem.documentId}`, {
+                data: {
+                  amount: newAmount
+                }
+              })
+              .then(() => {
+                console.log(
+                  `Updated modified item ${modifiedItem.id} amount to ${newAmount}`
+                );
+              })
+              .catch(error => {
+                console.error(
+                  `Error updating modified item ${modifiedItem.id}`,
+                  error
+                );
+              });
+          }
+        });
+      });
     }
   },
   mounted() {
-    this.fetchData();
-    this.fetchProjectItemModifieds();
+    // Wait for both API calls to finish then update the amounts
+    Promise.all([this.fetchData(), this.fetchProjectItemModifieds()])
+      .then(() => {
+        this.updateProjectItemModifiedAmounts();
+      })
+      .catch(error => {
+        console.error('Error in mounted hook:', error);
+      });
   },
 };
 </script>
