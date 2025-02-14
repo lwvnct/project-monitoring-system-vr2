@@ -236,14 +236,10 @@ export default {
     }
   },
   mounted() {
-    // Wait for both API calls to finish then update the amounts only once.
+    // Wait for both API calls to finish then update the amounts
     Promise.all([this.fetchData(), this.fetchProjectItemModifieds()])
       .then(() => {
-        // Added one-time update flag feature:
-        if (!localStorage.getItem('projectItemModifiedsUpdated')) {
-          this.updateProjectItemModifiedAmounts();
-          localStorage.setItem('projectItemModifiedsUpdated', 'true');
-        }
+        this.updateProjectItemModifiedAmounts();
       })
       .catch(error => {
         console.error('Error in mounted hook:', error);
