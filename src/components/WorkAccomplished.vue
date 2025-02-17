@@ -1,90 +1,73 @@
 <template>
   <div>
-    <h2 class="mt-3 ms-10">WORK ACCOMPLISHED REPORT</h2>
     <table border="1" class="mx-auto mt-5">
       <thead>
         <tr>
-          <th>ITEM NO.</th>
-          <th>DESCRIPTION</th>
+          <th colspan="16" class="table-header">WORK ACCOMPLISHED REPORT</th>
+        </tr>
+        <tr>
+          <th rowspan="2">ITEM NO.</th>
+          <th rowspan="2">DESCRIPTION</th>
+          <th colspan="5">ORIGINAL CONTRACT</th>
+          <th colspan="5">WORK ACCOMPLISHED</th>
+          <th colspan="2">WEIGHTED % ACCOMP</th>
+          <th rowspan="2" class="field">ENTER QTY</th>
+          <th rowspan="2" class="field">ENTER PERCENTAGE</th>
+        </tr>
+        <tr>
           <th>QTY</th>
           <th>UNIT</th>
           <th>UNIT COST</th>
           <th>AMOUNT</th>
           <th>WT.%</th>
-          <th class="field">ENTER QTY</th>
+          <th>Previous QTY</th>
           <th>Previous AMOUNT</th>
           <th>REMAINING QUANTITY</th>
           <th>TOTAL AMOUNT</th>
           <th>BALANCE</th>
-          <th class="field">ENTER PERCENTAGE</th>
-          <th>Previous PERCENTAGE</th>
+          <th>PREV PERCENTAGE</th>
           <th>TOTAL</th>
         </tr>
       </thead>
       <tbody>
+        <!-- Removed key from template element -->
         <template v-for="section in sections">
           <tr :key="'section-' + section.id">
-            <td colspan="14" class="font-weight-bold">{{ section.letter_label_for_item_no }}</td>
+            <td colspan="16" class="font-weight-bold">
+              {{ section.letter_label_for_item_no }}
+            </td>
           </tr>
           <tr :key="'desc-' + section.id">
-            <td colspan="14" class="font-italic">{{ section.mainDescription }}</td>
+            <td colspan="16" class="font-italic">
+              {{ section.mainDescription }}
+            </td>
           </tr>
           <tr v-for="item in section.items" :key="'item-' + item.id">
-            <!-- ITEM NO. -->
             <td>{{ item.itemno }}</td>
-            <!-- DESCRIPTION -->
             <td>{{ item.subDescription }}</td>
-            <!-- QTY -->
-            <td>{{ item.quantity }}</td>
-            <!-- UNIT -->
+            <td>{{ formatDecimal(item.quantity) }}</td>
             <td>{{ item.unit }}</td>
-            <!-- UNIT COST -->
-            <td>{{ item.unitCost ? parseFloat(item.unitCost).toFixed(2) : '-' }}</td>
-            <!-- AMOUNT -->
-            <td>{{ item.amount ? parseFloat(item.amount).toFixed(2) : '-' }}</td>
-            <!-- WT.% -->
-            <td>{{ item.wt_percent ? parseFloat(item.wt_percent).toFixed(2) : '-' }}</td>
-            <!-- ENTER QTY -->
+            <td>{{ formatDecimal(item.unitCost) }}</td>
+            <td>{{ formatDecimal(item.amount) }}</td>
+            <td>{{ formatDecimal(item.wt_percent) }}</td>
+            <td>{{ formatDecimal(getPreviousQty(section.id, item.itemno)) }}</td>
+            <td>{{ formatDecimal(calculatePreviousAmount(section.id, item)) }}</td>
+            <td>{{ formatDecimal(getModifiedQuantity(section.id, item.itemno)) }}</td>
+            <td>{{ formatDecimal(getTotalAmount(section.id, item.itemno)) }}</td>
+            <td>{{ formatDecimal(getModifiedAmount(section.id, item.itemno)) }}</td>
+            <td>{{ formatDecimal(getPreviousPercentage(section.id, item.itemno)) }}</td>
+            <td>{{ formatDecimal(getPreviousPercentage(section.id, item.itemno)) }}</td>
             <td>
               <input v-model.number="item.enterQty" type="number" min="0" step="0.01" />
             </td>
-            <!-- Previous AMOUNT -->
-            <td>{{ calculatePreviousAmount(section.id, item).toFixed(2) }}</td>
-            <!-- REMAINING QUANTITY -->
-            <td>
-              {{ (parseFloat(item.quantity) - parseFloat(item.enterQty || 0)).toFixed(2) }}
-            </td>
-            <!-- TOTAL AMOUNT -->
-            <td>
-              {{
-                (
-                  (parseFloat(item.quantity) - getPreviousQty(section.id, item.itemno)) *
-                  parseFloat(item.unitCost || 0)
-                ).toFixed(2)
-              }}
-            </td>
-            <!-- BALANCE -->
-            <td>
-              {{
-                (
-                  parseFloat(item.amount || 0) -
-                  parseFloat(calculatePreviousAmount(section.id, item))
-                ).toFixed(2)
-              }}
-            </td>
-            <!-- ENTER PERCENTAGE -->
             <td>
               <input v-model.number="item.enterPercentage" type="number" min="0" step="0.01" />
             </td>
-            <!-- Previous PERCENTAGE -->
-            <td>{{ getPreviousPercentage(section.id, item.itemno) }}</td>
-            <!-- TOTAL -->
-            <td>{{ getPreviousPercentage(section.id, item.itemno) }}</td>
           </tr>
         </template>
       </tbody>
     </table>
-    <button @click="submitData">SUBMIT</button>
+    <button @click="submitData" class="submit-btn px-10">SUBMIT</button>
   </div>
 </template>
 
@@ -96,6 +79,7 @@ export default {
   data() {
     return {
       sections: [],
+      projectItemModifieds: []
     };
   },
   methods: {
@@ -103,8 +87,7 @@ export default {
       const documentId = this.$route.params.documentId;
       try {
         const response = await axios.get(
-          `http://localhost:1337/api/header-per-project-sections?populate=*` +
-            `&filters[project][documentId][$eq]=${documentId}`
+          `http://localhost:1337/api/header-per-project-sections?populate=*&filters[project][documentId][$eq]=${documentId}`
         );
         if (response.data && response.data.data.length > 0) {
           // Set default values for input fields on each item
@@ -125,23 +108,70 @@ export default {
         console.error('Error fetching data:', error);
       }
     },
+    async fetchProjectItemModifieds() {
+      try {
+        const response = await axios.get("http://localhost:1337/api/project-item-modifieds?populate=*");
+        if (response.data && response.data.data) {
+          this.projectItemModifieds = response.data.data;
+        }
+      } catch (error) {
+        console.error('Error fetching project item modifieds:', error);
+      }
+    },
+    // Methods copied from ProjectDetails:
     getPreviousQty(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
       if (!section || !section.project_item_modifieds) return 0;
-      const modifiedItem = section.project_item_modifieds.find(modItem => modItem.itemno === itemno);
+      const modifiedItem = section.project_item_modifieds.find(
+        modItem => modItem.itemno === itemno
+      );
+      return modifiedItem ? parseFloat(modifiedItem.P_EnteredQuantity) || 0 : 0;
+    },
+    getModifiedQuantity(sectionId, itemno) {
+      const section = this.sections.find(sec => sec.id === sectionId);
+      if (!section || !section.project_item_modifieds) return 0;
+      const modifiedItem = section.project_item_modifieds.find(
+        modItem => modItem.itemno === itemno
+      );
       return modifiedItem ? parseFloat(modifiedItem.quantity) || 0 : 0;
     },
+    getModifiedAmount(sectionId, itemno) {
+      const section = this.sections.find(sec => sec.id === sectionId);
+      if (!section || !section.project_item_modifieds) return 0;
+      const modifiedItem = section.project_item_modifieds.find(
+        modItem => modItem.itemno === itemno
+      );
+      return modifiedItem ? parseFloat(modifiedItem.amount) || 0 : 0;
+    },
     calculatePreviousAmount(sectionId, item) {
-      const previousQty = parseFloat(item.quantity) - this.getPreviousQty(sectionId, item.itemno);
+      const previousQty = this.getPreviousQty(sectionId, item.itemno);
       const unitCost = parseFloat(item.unitCost) || 0;
       return previousQty * unitCost;
     },
     getPreviousPercentage(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
-      if (!section || !section.project_item_modifieds) return '-';
-      const modifiedItem = section.project_item_modifieds.find(modItem => modItem.itemno === itemno);
-      return modifiedItem && modifiedItem.wt_percent ? parseFloat(modifiedItem.wt_percent).toFixed(2) : '-';
+      if (!section || !section.project_item_modifieds) return 0;
+      const modifiedItem = section.project_item_modifieds.find(
+        modItem => modItem.itemno === itemno
+      );
+      return modifiedItem ? parseFloat(modifiedItem.P_EnteredQuantity) || 0 : 0;
     },
+    getTotalAmount(sectionId, itemno) {
+      const section = this.sections.find(sec => sec.id === sectionId);
+      if (!section || !section.project_item_modifieds) return 0;
+      const modifiedItem = section.project_item_modifieds.find(
+        modItem => modItem.itemno === itemno
+      );
+      return modifiedItem ? parseFloat(modifiedItem.totalAmount) || 0 : 0;
+    },
+    formatDecimal(value) {
+      if (value === null || value === undefined || isNaN(value)) return '0.00';
+      return parseFloat(value).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    },
+    // Submit function (retained from WorkAccomplished) to process user inputs
     async submitData() {
       try {
         // Loop through each section and its items
@@ -183,7 +213,6 @@ export default {
                       wt_percent: newWt,
                       header_per_project_section: section.documentId,
                       quantity: newRemaining, // Updated remaining quantity
-                      // Store the current entered values
                       p_wt_percent: inputWt,
                       P_EnteredQuantity: inputQty,
                     }
@@ -203,7 +232,6 @@ export default {
                       header_per_project_section: section.documentId,
                       itemno: item.itemno,
                       quantity: newRemaining, // Store the remaining quantity
-                      // Store the current entered values
                       p_wt_percent: inputWt,
                       P_EnteredQuantity: inputQty,
                     }
@@ -213,7 +241,7 @@ export default {
             }
           }
         }
-        // After processing all modifications, update the modified amounts (the update logic from ProjectDetails)
+        // After processing modifications, update the modified amounts
         await this.updateModifiedAmounts();
         alert('Data successfully updated!');
       } catch (error) {
@@ -226,10 +254,10 @@ export default {
         const projectItemModifieds = modResponse.data && modResponse.data.data ? modResponse.data.data : [];
         // Loop through each section
         this.sections.forEach(section => {
-          // Associate modified records with the section
+          // Associate modified records with the section using header_per_project_section.id
           section.project_item_modifieds = projectItemModifieds.filter(mod => {
-            if(mod.header_per_project_section) {
-              if(mod.header_per_project_section.id) {
+            if (mod.header_per_project_section) {
+              if (mod.header_per_project_section.id) {
                 return mod.header_per_project_section.id === section.id;
               } else {
                 return mod.header_per_project_section === section.documentId;
@@ -277,7 +305,10 @@ export default {
     }
   },
   mounted() {
-    this.fetchData();
+    Promise.all([this.fetchData(), this.fetchProjectItemModifieds()])
+      .catch(error => {
+        console.error('Error in mounted hook:', error);
+      });
   }
 };
 </script>
@@ -301,6 +332,15 @@ table {
   border-collapse: collapse; /* Reduce spacing between cells */
 }
 
+.table-header {
+  background-color: white;
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+  padding: 10px;
+  background-color: rgb(239, 213, 40);
+}
+
 input {
   width: 60px; /* Reduce input field width */
 }
@@ -316,20 +356,22 @@ input {
 
 button {
   display: block;
-  margin: 10px auto;
+  margin: 10px auto; /* Centers the button */
   padding: 8px 16px; /* Adjust button size */
-  background-color: #007bff;
+  background-color: #066913;
   color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
+  letter-spacing: 1px;
+  transition: background-color 0.3s ease;
 }
 
 button:hover {
-  background-color: #0056b3;
+  background-color: #085b14;
 }
 
 .field {
-  background-color: rgb(239, 213, 40);
+  background-color: rgb(221, 220, 216);
 }
 </style>

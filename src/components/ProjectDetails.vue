@@ -1,11 +1,18 @@
 <template>
   <div>
-    <h2 class="mt-3 ms-10">Project Details</h2>
     <table border="1" class="mx-auto mt-5">
       <thead>
         <tr>
-          <th>ITEM NO.</th>
-          <th>DESCRIPTION</th>
+          <th colspan="14" class="table-header">Project Details</th>
+        </tr>
+        <tr>
+          <th rowspan="2">ITEM NO.</th>
+          <th rowspan="2">DESCRIPTION</th>
+          <th colspan="5">ORIGINAL CONTRACT</th>
+          <th colspan="5">WORK ACCOMPLISHED</th>
+          <th colspan="2">WEIGHTED % ACCOMP</th>
+        </tr>
+        <tr>
           <th>QTY</th>
           <th>UNIT</th>
           <th>UNIT COST</th>
@@ -273,6 +280,14 @@ table {
   max-width: 90%;
   margin: auto;
   border-collapse: collapse;
+}
+
+.table-header {
+  background-color: rgb(239, 213, 40);
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+  padding: 10px;
 }
 
 .font-weight-bold {
