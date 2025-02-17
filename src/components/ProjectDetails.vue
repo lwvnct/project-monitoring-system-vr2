@@ -48,7 +48,7 @@
             <td>{{ formatDecimal(getModifiedQuantity(section.id, item.itemno)) }}</td>
             <!-- TOTAL AMOUNT computed as P_EnteredQuantity * unitCost -->
             <td>{{ formatDecimal(getTotalAmount(section.id, item.itemno)) }}</td>
-            <!-- BALANCE displays the "amount" from project_item_modifieds -->
+            <!-- BALANCE displays the updated "amount" from project_item_modifieds (after subtraction) -->
             <td>{{ formatDecimal(getModifiedAmount(section.id, item.itemno)) }}</td>
             <!-- PREV PERCENTAGE displays the value of P_EnteredQuantity -->
             <td>{{ formatDecimal(getPreviousPercentage(section.id, item.itemno)) }}</td>
@@ -153,22 +153,15 @@ export default {
       return modifiedItem ? parseFloat(modifiedItem.P_EnteredQuantity) || 0 : 0;
     },
     // Retrieves the "quantity" from the modified items
-   // Retrieves the "quantity" from the modified items (project_item_modifieds)
-getModifiedQuantity(sectionId, itemno) {
-  // Match the section by ID
-  const section = this.sections.find(sec => sec.id === sectionId);
-  if (!section || !section.project_item_modifieds) return 0;
-  
-  // Find the modified item for this section by matching itemno
-  const modifiedItem = section.project_item_modifieds.find(
-    modItem => modItem.itemno === itemno
-  );
-  
-  // Return the quantity from the modified item, defaulting to 0 if not found
-  return modifiedItem ? parseFloat(modifiedItem.quantity) || 0 : 0;
-},
-
-    // Retrieves the "amount" from the modified items for the BALANCE column
+    getModifiedQuantity(sectionId, itemno) {
+      const section = this.sections.find(sec => sec.id === sectionId);
+      if (!section || !section.project_item_modifieds) return 0;
+      const modifiedItem = section.project_item_modifieds.find(
+        modItem => modItem.itemno === itemno
+      );
+      return modifiedItem ? parseFloat(modifiedItem.quantity) || 0 : 0;
+    },
+    // Retrieves the "amount" from the modified items (BALANCE column)
     getModifiedAmount(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
       if (!section || !section.project_item_modifieds) return 0;
@@ -191,7 +184,7 @@ getModifiedQuantity(sectionId, itemno) {
       );
       return modifiedItem ? parseFloat(modifiedItem.P_EnteredQuantity) || 0 : 0;
     },
-    // NEW: Get the computed TOTAL AMOUNT from the modified record.
+    // Retrieves the computed TOTAL AMOUNT from the modified record.
     getTotalAmount(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
       if (!section || !section.project_item_modifieds) return 0;
@@ -200,44 +193,57 @@ getModifiedQuantity(sectionId, itemno) {
       );
       return modifiedItem ? parseFloat(modifiedItem.totalAmount) || 0 : 0;
     },
-    // NEW: Update the totalAmount in each project-item-modified record by computing:
-    // totalAmount = P_EnteredQuantity * unitCost
+    // Update each project-item-modified record:
+    // 1. Compute totalAmount = P_EnteredQuantity * unitCost.
+    // 2. Subtract totalAmount from the current amount.
+    // 3. Update both fields in the backend.
     updateProjectItemModifiedAmounts() {
-      // First, associate each modified record to its corresponding section by matching header_per_project_section.id.
-      this.sections.forEach(section => {
-        section.project_item_modifieds = this.projectItemModifieds.filter(mod => {
-          return mod.header_per_project_section && mod.header_per_project_section.id === section.id;
-        });
-        // For every item in this section, update the modified record’s totalAmount
-        section.items.forEach(item => {
-          const modItem = section.project_item_modifieds.find(mod => mod.itemno === item.itemno);
-          if (modItem) {
-            const newTotalAmount =
-              parseFloat(modItem.P_EnteredQuantity || 0) * parseFloat(item.unitCost || 0);
-            // Place the computed value inside totalAmount
-            modItem.totalAmount = newTotalAmount;
-            // Send an API request to update the record's totalAmount in the backend
-            axios
-              .put(`http://localhost:1337/api/project-item-modifieds/${modItem.documentId}`, {
-                data: {
-                  totalAmount: newTotalAmount
-                }
-              })
-              .then(() => {
-                console.log(
-                  `Updated modified item ${modItem.id} totalAmount to ${newTotalAmount}`
-                );
-              })
-              .catch(error => {
-                console.error(
-                  `Error updating modified item ${modItem.id}`,
-                  error
-                );
-              });
-          }
-        });
-      });
-    },
+  this.sections.forEach(section => {
+    // Associate modified records with the section using header_per_project_section.id
+    section.project_item_modifieds = this.projectItemModifieds.filter(mod => {
+      return mod.header_per_project_section && mod.header_per_project_section.id === section.id;
+    });
+
+    section.items.forEach(item => {
+      const modItem = section.project_item_modifieds.find(mod => mod.itemno === item.itemno);
+      if (modItem) {
+        // Compute totalAmount from P_EnteredQuantity * unitCost
+        const computedTotalAmount = parseFloat(modItem.P_EnteredQuantity || 0) * parseFloat(item.unitCost || 0);
+        const originalAmount = parseFloat(modItem.amount) || 0;
+
+        // If the calculated totalAmount or amount is different from the current value, update the record
+        if (computedTotalAmount !== modItem.totalAmount || originalAmount !== modItem.amount) {
+          modItem.totalAmount = computedTotalAmount;
+          
+          // Subtract the computed totalAmount from the original amount
+          const newModifiedAmount = originalAmount - computedTotalAmount;
+          modItem.amount = newModifiedAmount;
+
+          // Update the record on the backend with both updated fields.
+          axios
+            .put(`http://localhost:1337/api/project-item-modifieds/${modItem.id}`, {
+              data: {
+                totalAmount: computedTotalAmount,
+                amount: newModifiedAmount
+              }
+            })
+            .then(() => {
+              console.log(
+                `Updated modified item ${modItem.id} with totalAmount ${computedTotalAmount} and new amount ${newModifiedAmount}`
+              );
+            })
+            .catch(error => {
+              console.error(
+                `Error updating modified item ${modItem.id}`,
+                error
+              );
+            });
+        }
+      }
+    });
+  });
+},
+
     formatDecimal(value) {
       if (value === null || value === undefined || isNaN(value)) return '0.00';
       return parseFloat(value).toLocaleString('en-US', {
@@ -247,7 +253,7 @@ getModifiedQuantity(sectionId, itemno) {
     }
   },
   mounted() {
-    // Fetch both sections and modified items; then associate and update totalAmount.
+    // Fetch sections and modified items, then update the amounts.
     Promise.all([this.fetchData(), this.fetchProjectItemModifieds()])
       .then(() => {
         this.updateProjectItemModifiedAmounts();
