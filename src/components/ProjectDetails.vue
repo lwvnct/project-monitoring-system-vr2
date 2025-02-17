@@ -198,52 +198,46 @@ export default {
     // 2. Subtract totalAmount from the current amount.
     // 3. Update both fields in the backend.
     updateProjectItemModifiedAmounts() {
-  this.sections.forEach(section => {
-    // Associate modified records with the section using header_per_project_section.id
-    section.project_item_modifieds = this.projectItemModifieds.filter(mod => {
-      return mod.header_per_project_section && mod.header_per_project_section.id === section.id;
-    });
-
-    section.items.forEach(item => {
-      const modItem = section.project_item_modifieds.find(mod => mod.itemno === item.itemno);
-      if (modItem) {
-        // Compute totalAmount from P_EnteredQuantity * unitCost
-        const computedTotalAmount = parseFloat(modItem.P_EnteredQuantity || 0) * parseFloat(item.unitCost || 0);
-        const originalAmount = parseFloat(modItem.amount) || 0;
-
-        // If the calculated totalAmount or amount is different from the current value, update the record
-        if (computedTotalAmount !== modItem.totalAmount || originalAmount !== modItem.amount) {
-          modItem.totalAmount = computedTotalAmount;
-          
-          // Subtract the computed totalAmount from the original amount
-          const newModifiedAmount = originalAmount - computedTotalAmount;
-          modItem.amount = newModifiedAmount;
-
-          // Update the record on the backend with both updated fields.
-          axios
-            .put(`http://localhost:1337/api/project-item-modifieds/${modItem.id}`, {
-              data: {
-                totalAmount: computedTotalAmount,
-                amount: newModifiedAmount
-              }
-            })
-            .then(() => {
-              console.log(
-                `Updated modified item ${modItem.id} with totalAmount ${computedTotalAmount} and new amount ${newModifiedAmount}`
-              );
-            })
-            .catch(error => {
-              console.error(
-                `Error updating modified item ${modItem.id}`,
-                error
-              );
-            });
-        }
-      }
-    });
-  });
-},
-
+      this.sections.forEach(section => {
+        // Associate modified records with the section using header_per_project_section.id
+        section.project_item_modifieds = this.projectItemModifieds.filter(mod => {
+          return mod.header_per_project_section && mod.header_per_project_section.id === section.id;
+        });
+        // For every item in the section, update the modified record’s totalAmount and adjusted amount.
+        section.items.forEach(item => {
+          const modItem = section.project_item_modifieds.find(mod => mod.itemno === item.itemno);
+          if (modItem) {
+            // Compute totalAmount from P_EnteredQuantity * unitCost
+            const computedTotalAmount =
+              parseFloat(modItem.P_EnteredQuantity || 0) * parseFloat(item.unitCost || 0);
+            modItem.totalAmount = computedTotalAmount;
+            // Subtract the computed totalAmount from the original amount
+            const originalAmount = parseFloat(modItem.amount) || 0;
+            const newModifiedAmount = originalAmount - computedTotalAmount;
+            modItem.amount = newModifiedAmount;
+            // Update the record on the backend with both updated fields.
+            axios
+              .put(`http://localhost:1337/api/project-item-modifieds/${modItem.documentId}`, {
+                data: {
+                  totalAmount: computedTotalAmount,
+                  amount: newModifiedAmount
+                }
+              })
+              .then(() => {
+                console.log(
+                  `Updated modified item ${modItem.id} with totalAmount ${computedTotalAmount} and new amount ${newModifiedAmount}`
+                );
+              })
+              .catch(error => {
+                console.error(
+                  `Error updating modified item ${modItem.id}`,
+                  error
+                );
+              });
+          }
+        });
+      });
+    },
     formatDecimal(value) {
       if (value === null || value === undefined || isNaN(value)) return '0.00';
       return parseFloat(value).toLocaleString('en-US', {
@@ -253,11 +247,8 @@ export default {
     }
   },
   mounted() {
-    // Fetch sections and modified items, then update the amounts.
+    // Fetch sections and modified items—but do not auto-update amounts.
     Promise.all([this.fetchData(), this.fetchProjectItemModifieds()])
-      .then(() => {
-        this.updateProjectItemModifiedAmounts();
-      })
       .catch(error => {
         console.error('Error in mounted hook:', error);
       });

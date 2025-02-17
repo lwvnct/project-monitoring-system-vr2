@@ -92,7 +92,7 @@
 import axios from 'axios';
 
 export default {
-  name: 'ProjectDetails',
+  name: 'WorkAccomplished',
   data() {
     return {
       sections: [],
@@ -107,7 +107,19 @@ export default {
             `&filters[project][documentId][$eq]=${documentId}`
         );
         if (response.data && response.data.data.length > 0) {
-          this.sections = response.data.data;
+          // Set default values for input fields on each item
+          this.sections = response.data.data.map(section => {
+            if (section.items && Array.isArray(section.items)) {
+              section.items = section.items.map(item => {
+                return {
+                  ...item,
+                  enterQty: 0,
+                  enterPercentage: 0,
+                };
+              });
+            }
+            return section;
+          });
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -201,9 +213,66 @@ export default {
             }
           }
         }
+        // After processing all modifications, update the modified amounts (the update logic from ProjectDetails)
+        await this.updateModifiedAmounts();
         alert('Data successfully updated!');
       } catch (error) {
         console.error('Error submitting data:', error);
+      }
+    },
+    async updateModifiedAmounts() {
+      try {
+        const modResponse = await axios.get("http://localhost:1337/api/project-item-modifieds?populate=*");
+        const projectItemModifieds = modResponse.data && modResponse.data.data ? modResponse.data.data : [];
+        // Loop through each section
+        this.sections.forEach(section => {
+          // Associate modified records with the section
+          section.project_item_modifieds = projectItemModifieds.filter(mod => {
+            if(mod.header_per_project_section) {
+              if(mod.header_per_project_section.id) {
+                return mod.header_per_project_section.id === section.id;
+              } else {
+                return mod.header_per_project_section === section.documentId;
+              }
+            }
+            return false;
+          });
+          // For every item in the section, update the modified record’s totalAmount and adjusted amount.
+          section.items.forEach(item => {
+            const modItem = section.project_item_modifieds.find(mod => mod.itemno === item.itemno);
+            if (modItem) {
+              // Compute totalAmount from P_EnteredQuantity * unitCost
+              const computedTotalAmount =
+                parseFloat(modItem.P_EnteredQuantity || 0) * parseFloat(item.unitCost || 0);
+              modItem.totalAmount = computedTotalAmount;
+              // Subtract the computed totalAmount from the original amount
+              const originalAmount = parseFloat(modItem.amount) || 0;
+              const newModifiedAmount = originalAmount - computedTotalAmount;
+              modItem.amount = newModifiedAmount;
+              // Update the record on the backend with both updated fields.
+              axios
+                .put(`http://localhost:1337/api/project-item-modifieds/${modItem.documentId}`, {
+                  data: {
+                    totalAmount: computedTotalAmount,
+                    amount: newModifiedAmount
+                  }
+                })
+                .then(() => {
+                  console.log(
+                    `Updated modified item ${modItem.id} with totalAmount ${computedTotalAmount} and new amount ${newModifiedAmount}`
+                  );
+                })
+                .catch(error => {
+                  console.error(
+                    `Error updating modified item ${modItem.id}`,
+                    error
+                  );
+                });
+            }
+          });
+        });
+      } catch (error) {
+        console.error('Error updating modified amounts:', error);
       }
     }
   },
