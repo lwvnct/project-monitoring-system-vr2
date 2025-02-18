@@ -25,6 +25,13 @@
         class="pa-2"
       >
         <v-card class="mx-auto project-card" elevation="2">
+          <!-- Project image placed on top -->
+          <v-img
+            v-if="project.projectImage && project.projectImage.url"
+            :src="getImageUrl(project.projectImage)"
+            height="200px"
+            class="white--text align-end"
+          ></v-img>
           <v-card-subtitle class="subtitle-1 font-weight-bold">
             {{ project.projectLocation }}
           </v-card-subtitle>
@@ -66,29 +73,24 @@
             </v-progress-linear>
           </v-card-text>
           <v-card-actions>
-            <!-- View Details Button (kept) -->
+            <!-- View Details Button -->
             <router-link :to="`/project-details/${project.documentId}`" class="icon-button">
               <v-btn color="primary" text small>View Details</v-btn>
             </router-link>
-
             <v-spacer></v-spacer>
-
             <!-- Accomplished Report Icon -->
             <router-link :to="`/work-accomplished/${project.documentId}`" class="icon-button">
               <v-btn icon small color="success">
                 <v-icon>mdi-file-check</v-icon>
               </v-btn>
             </router-link>
-
             <!-- Weekly Progress Report Icon -->
             <router-link :to="`/weekly-progress/${project.documentId}`" class="icon-button">
               <v-btn icon small color="info">
                 <v-icon>mdi-calendar-clock</v-icon>
               </v-btn>
             </router-link>
-
           </v-card-actions>
-
         </v-card>
       </v-col>
     </v-row>
@@ -119,36 +121,25 @@ export default {
   methods: {
     async fetchProjects() {
       try {
-        const response = await axios.get('http://localhost:1337/api/header-per-project-sections?populate=*');
-        const sectionsData = response.data.data;
+        const response = await axios.get('http://localhost:1337/api/projects?populate=*');
+        const projectsData = response.data.data;
         
-        let projectsMap = new Map();
-
-        sectionsData.forEach(section => {
-          const projectData = section.project;
-          if (!projectData) return;
-
-          const projectName = projectData.projectName;
-          if (!projectsMap.has(projectName)) {
-            projectsMap.set(projectName, {
-              documentId: projectData.documentId,
-              projectName: projectName,
-              projectLocation: projectData.projectLocation || "Unknown",
-              startDate: projectData.startDate || null,
-              dueDate: projectData.dueDate || null,
-              sourceOfFund: projectData.sourceOfFund || '',
-              totalProjectAmount: projectData.totalProjectAmount || 0,
-              projectDuration: projectData.projectDuration || 0,
-              progress: 0,
-              showMore: false
-            });
-          }
-
-          let totalWtPercent = section.project_item_modifieds?.reduce((sum, item) => sum + (item.wt_percent ?? 0), 0) || 0;
-          projectsMap.get(projectName).progress += totalWtPercent;
+        // Map each project from the API to your desired structure.
+        this.projects = projectsData.map(project => {
+          return {
+            documentId: project.documentId,
+            projectName: project.projectName,
+            projectLocation: project.projectLocation || "Unknown",
+            startDate: project.startDate || null,
+            dueDate: project.dueDate || null,
+            sourceOfFund: project.sourceOfFund || '',
+            totalProjectAmount: project.totalProjectAmount || 0,
+            projectDuration: project.projectDuration || 0,
+            progress: 0, // Update if you have a progress calculation method.
+            header_per_project_sections: project.header_per_project_sections || [],
+            projectImage: project.projectImage || null
+          };
         });
-
-        this.projects = Array.from(projectsMap.values());
       } catch (error) {
         console.error("Error fetching projects:", error);
       }
@@ -162,6 +153,10 @@ export default {
       if (progress < 30) return 'red';
       if (progress < 70) return 'orange';
       return 'green';
+    },
+    getImageUrl(image) {
+      // Prepend the Strapi URL if the image URL is relative.
+      return image && image.url ? `http://localhost:1337${image.url}` : '';
     }
   },
   mounted() {
