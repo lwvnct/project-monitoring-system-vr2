@@ -4,7 +4,7 @@
     <!-- Form Container -->
     <div class="form-container mt-5 ms-5">
       <h2>Project Form</h2>
-      <form @submit.prevent="submitForm">
+      <form @submit.prevent="submitForm" enctype="multipart/form-data">
         <div class="form-row">
           <div class="form-group" v-for="(value, key) in project" :key="key">
             <label :for="key">{{ formatLabel(key) }}</label>
@@ -13,6 +13,17 @@
               v-model="project[key]"
               :type="getInputType(key)"
               @input="sanitizeNumberInput(key)"
+              required
+            />
+          </div>
+
+          <!-- File Upload -->
+          <div class="form-group">
+            <label for="projectImage">Project Image</label>
+            <input
+              type="file"
+              id="projectImage"
+              @change="handleFileUpload"
               required
             />
           </div>
@@ -37,12 +48,14 @@ export default {
         sourceOfFund: "",
         startDate: "",
         dueDate: "",
+        projectImage: null, // For storing the selected image file
       },
     };
   },
   methods: {
     async submitForm() {
       try {
+        // Sanitize and format input data
         if (this.project.totalProjectAmount) {
           this.project.totalProjectAmount = Number(
             this.project.totalProjectAmount.toString().replace(/,/g, "")
@@ -56,9 +69,34 @@ export default {
           this.project.dueDate = this.formatDate(this.project.dueDate);
         }
 
+        // Create FormData to include the file in the request
+        const formData = new FormData();
+        formData.append("files", this.project.projectImage);
+        formData.append("ref", "projects"); // Model reference
+        formData.append("refId", "null"); // ID to link (use `null` if not linking to an existing entry)
+        formData.append("field", "projectImage"); // The field for image
+
+        // Upload the image to Strapi
+        const fileUploadResponse = await axios.post(
+          "http://localhost:1337/api/upload",
+          formData,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+
+        const uploadedImageId = fileUploadResponse.data[0].id;
+
+        // Now, create the project with the uploaded image ID
         const projectData = {
-          ...this.project,
-          
+          projectName: this.project.projectName,
+          projectLocation: this.project.projectLocation,
+          totalProjectAmount: this.project.totalProjectAmount,
+          projectDuration: this.project.projectDuration,
+          sourceOfFund: this.project.sourceOfFund,
+          startDate: this.project.startDate,
+          dueDate: this.project.dueDate,
+          projectImage: uploadedImageId, // Associate the uploaded image with the project
         };
 
         // Create the project in the first API
@@ -69,9 +107,12 @@ export default {
         console.log("Project created:", response.data);
 
         // Store the same data in the second API
-        const secondResponse = await axios.post("http://localhost:1337/api/project-with-modified-datas", {
-          data: projectData,
-        });
+        const secondResponse = await axios.post(
+          "http://localhost:1337/api/project-with-modified-datas",
+          {
+            data: projectData,
+          }
+        );
 
         console.log("Data also stored in second API");
 
@@ -79,8 +120,11 @@ export default {
         const projectId = response.data.data.id;
         const secondprojectId = secondResponse.data.data.id;
 
-        // Redirect to the next page and pass the projectId to store the labels
-        this.$router.push({ name: "OriginalContract", query: { projectId, secondprojectId } });
+        // Redirect to the next page and pass the projectId
+        this.$router.push({
+          name: "OriginalContract",
+          query: { projectId, secondprojectId },
+        });
 
         alert("Project submitted successfully!");
       } catch (error) {
@@ -89,6 +133,9 @@ export default {
           `Failed to submit project: ${error.response?.data?.error?.message || "Unknown error"}`
         );
       }
+    },
+    handleFileUpload(event) {
+      this.project.projectImage = event.target.files[0]; // Store the selected file
     },
     formatLabel(key) {
       return key.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase());
@@ -116,31 +163,6 @@ export default {
   justify-content: center;
   max-width: 900px;
   margin: 0 auto;
-}
-
-/* Routing buttons styling */
-.routing-buttons {
-  position: absolute;
-  top: 0;
-  right: 0;
-  display: flex;
-  gap: 10px;
-}
-
-.routing-buttons .btn {
-  padding: 10px 15px;
-  font-size: 14px;
-  background-color: #114780;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  text-decoration: none;
-  transition: background 0.3s;
-}
-
-.routing-buttons .btn:hover {
-  background-color: #047c08;
 }
 
 /* Main container styling */
@@ -191,6 +213,10 @@ input:focus {
   outline: none;
 }
 
+input[type="file"] {
+  padding: 6px;
+}
+
 .btn {
   width: 100%;
   padding: 12px;
@@ -214,10 +240,6 @@ input:focus {
   }
   .form-container {
     padding: 20px;
-  }
-  .routing-buttons {
-    position: static;
-    margin-bottom: 10px;
   }
 }
 </style>
