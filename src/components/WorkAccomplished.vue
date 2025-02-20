@@ -30,19 +30,19 @@
         </tr>
       </thead>
       <tbody>
-        <!-- Removed key from template element -->
+        <!-- Removed key from the template element -->
         <template v-for="section in sections">
-          <tr :key="'section-' + section.id">
+          <tr :key="'section-label-' + section.id">
             <td colspan="16" class="font-weight-bold">
               {{ section.letter_label_for_item_no }}
             </td>
           </tr>
-          <tr :key="'desc-' + section.id">
+          <tr :key="'section-desc-' + section.id">
             <td colspan="16" class="font-italic">
               {{ section.mainDescription }}
             </td>
           </tr>
-          <tr v-for="item in section.items" :key="'item-' + item.id">
+          <tr v-for="item in section.items" :key="item.id">
             <td>{{ item.itemno }}</td>
             <td>{{ item.subDescription }}</td>
             <td>{{ formatDecimal(item.quantity) }}</td>
@@ -58,10 +58,20 @@
             <td>{{ formatDecimal(getPreviousPercentage(section.id, item.itemno)) }}</td>
             <td>{{ formatDecimal(getPreviousPercentage(section.id, item.itemno)) }}</td>
             <td>
-              <input v-model.number="item.enterQty" type="number" min="0" step="0.01" />
+              <input
+                v-model.number="item.enterQty"
+                type="number"
+                min="0"
+                step="0.01"
+              />
             </td>
             <td>
-              <input v-model.number="item.enterPercentage" type="number" min="0" step="0.01" />
+              <input
+                v-model.number="item.enterPercentage"
+                type="number"
+                min="0"
+                step="0.01"
+              />
             </td>
           </tr>
         </template>
@@ -90,16 +100,13 @@ export default {
           `http://localhost:1337/api/header-per-project-sections?populate=*&filters[project][documentId][$eq]=${documentId}`
         );
         if (response.data && response.data.data.length > 0) {
-          // Set default values for input fields on each item
           this.sections = response.data.data.map(section => {
             if (section.items && Array.isArray(section.items)) {
-              section.items = section.items.map(item => {
-                return {
-                  ...item,
-                  enterQty: 0,
-                  enterPercentage: 0,
-                };
-              });
+              section.items = section.items.map(item => ({
+                ...item,
+                enterQty: 0,
+                enterPercentage: 0,
+              }));
             }
             return section;
           });
@@ -118,7 +125,6 @@ export default {
         console.error('Error fetching project item modifieds:', error);
       }
     },
-    // Methods copied from ProjectDetails:
     getPreviousQty(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
       if (!section || !section.project_item_modifieds) return 0;
@@ -171,90 +177,11 @@ export default {
         maximumFractionDigits: 2
       });
     },
-    // Submit function (retained from WorkAccomplished) to process user inputs
-    async submitData() {
-      try {
-        // Loop through each section and its items
-        for (const section of this.sections) {
-          for (const item of section.items) {
-            // Only process if there is new input in either field
-            if (item.enterQty !== undefined || item.enterPercentage !== undefined) {
-              // Check if a modification record already exists for this item
-              const response = await axios.get(
-                `http://localhost:1337/api/project-item-modifieds?filters[header_per_project_section][$eq]=${section.id}&filters[itemno][$eq]=${item.itemno}`
-              );
-
-              // Convert input values to numbers (defaulting to 0)
-              const inputQty = parseFloat(item.enterQty || 0);
-              const inputWt = parseFloat(item.enterPercentage || 0);
-              const originalQty = parseFloat(item.quantity);
-
-              if (response.data && response.data.data.length > 0) {
-                // If record exists, add the new input to the previous values
-                const modRecord = response.data.data[0];
-                const previousEntered = parseFloat(modRecord.EnteredQuantity) || 0;
-                const previousRemaining = parseFloat(modRecord.quantity) || originalQty;
-                // Delivered quantity so far = original quantity - previous remaining
-                const previousDelivered = originalQty - previousRemaining;
-                // New delivered quantity = previous delivered + new input
-                const newDelivered = previousDelivered + inputQty;
-                // New remaining quantity = original quantity - new delivered quantity
-                const newRemaining = originalQty - newDelivered;
-                // Sum the percentages
-                const previousWt = parseFloat(modRecord.wt_percent) || 0;
-                const newWt = previousWt + inputWt;
-
-                const existingRecordId = modRecord.documentId;
-                await axios.put(
-                  `http://localhost:1337/api/project-item-modifieds/${existingRecordId}`,
-                  {
-                    data: {
-                      EnteredQuantity: previousEntered + inputQty,
-                      wt_percent: newWt,
-                      header_per_project_section: section.documentId,
-                      quantity: newRemaining, // Updated remaining quantity
-                      p_wt_percent: inputWt,
-                      P_EnteredQuantity: inputQty,
-                    }
-                  }
-                );
-              } else {
-                // If no record exists, create a new record using the input values
-                const newEntered = inputQty;
-                const newRemaining = originalQty - newEntered;
-                const newWt = inputWt;
-                await axios.post(
-                  `http://localhost:1337/api/project-item-modifieds`,
-                  {
-                    data: {
-                      EnteredQuantity: newEntered,
-                      wt_percent: newWt,
-                      header_per_project_section: section.documentId,
-                      itemno: item.itemno,
-                      quantity: newRemaining, // Store the remaining quantity
-                      p_wt_percent: inputWt,
-                      P_EnteredQuantity: inputQty,
-                    }
-                  }
-                );
-              }
-            }
-          }
-        }
-        // After processing modifications, update the modified amounts
-        await this.updateModifiedAmounts();
-        alert('Data successfully updated!');
-      } catch (error) {
-        console.error('Error submitting data:', error);
-      }
-    },
     async updateModifiedAmounts() {
       try {
         const modResponse = await axios.get("http://localhost:1337/api/project-item-modifieds?populate=*");
         const projectItemModifieds = modResponse.data && modResponse.data.data ? modResponse.data.data : [];
-        // Loop through each section
         this.sections.forEach(section => {
-          // Associate modified records with the section using header_per_project_section.id
           section.project_item_modifieds = projectItemModifieds.filter(mod => {
             if (mod.header_per_project_section) {
               if (mod.header_per_project_section.id) {
@@ -265,19 +192,15 @@ export default {
             }
             return false;
           });
-          // For every item in the section, update the modified record’s totalAmount and adjusted amount.
           section.items.forEach(item => {
             const modItem = section.project_item_modifieds.find(mod => mod.itemno === item.itemno);
             if (modItem) {
-              // Compute totalAmount from P_EnteredQuantity * unitCost
               const computedTotalAmount =
                 parseFloat(modItem.P_EnteredQuantity || 0) * parseFloat(item.unitCost || 0);
               modItem.totalAmount = computedTotalAmount;
-              // Subtract the computed totalAmount from the original amount
               const originalAmount = parseFloat(modItem.amount) || 0;
               const newModifiedAmount = originalAmount - computedTotalAmount;
               modItem.amount = newModifiedAmount;
-              // Update the record on the backend with both updated fields.
               axios
                 .put(`http://localhost:1337/api/project-item-modifieds/${modItem.documentId}`, {
                   data: {
@@ -302,6 +225,117 @@ export default {
       } catch (error) {
         console.error('Error updating modified amounts:', error);
       }
+    },
+    // Compute totals for updating remaining values
+    computeTotals(section) {
+      const items = section.items || [];
+      const projectItemModifieds = section.project_item_modifieds || [];
+      const totalWTPercent = items.reduce(
+        (acc, item) => acc + (Number(item.wt_percent) || 0),
+        0
+      );
+      const totalPrevWTPercents = projectItemModifieds.reduce(
+        (acc, mod) => acc + (Number(mod.p_wt_percent) || 0),
+        0
+      );
+      return { totalWTPercent, totalPrevWTPercents };
+    },
+    // Update the header's remaining value for all sections after submission
+    async updateRemainingForAllSections() {
+      for (const section of this.sections) {
+        const computed = this.computeTotals(section);
+        const computedPrev = computed.totalPrevWTPercents || 0;
+        const originalRemaining = Number(section.remaining) || 0;
+        const newRemaining = originalRemaining - computedPrev;
+        section.remaining = newRemaining;
+        try {
+          await axios.put(
+            `http://localhost:1337/api/header-per-project-sections/${section.documentId}`,
+            {
+              data: {
+                remaining: newRemaining
+              }
+            }
+          );
+          console.log(
+            "Remaining updated for section:",
+            section.documentId,
+            newRemaining
+          );
+        } catch (error) {
+          console.error(
+            "Error updating remaining for section:",
+            section.documentId,
+            error
+          );
+        }
+      }
+    },
+    async submitData() {
+      try {
+        // Loop through each section and its items to update modifications
+        for (const section of this.sections) {
+          for (const item of section.items) {
+            if (item.enterQty !== undefined || item.enterPercentage !== undefined) {
+              const response = await axios.get(
+                `http://localhost:1337/api/project-item-modifieds?filters[header_per_project_section][$eq]=${section.id}&filters[itemno][$eq]=${item.itemno}`
+              );
+              const inputQty = parseFloat(item.enterQty || 0);
+              const inputWt = parseFloat(item.enterPercentage || 0);
+              const originalQty = parseFloat(item.quantity);
+              if (response.data && response.data.data.length > 0) {
+                const modRecord = response.data.data[0];
+                const previousEntered = parseFloat(modRecord.EnteredQuantity) || 0;
+                const previousRemaining = parseFloat(modRecord.quantity) || originalQty;
+                const previousDelivered = originalQty - previousRemaining;
+                const newDelivered = previousDelivered + inputQty;
+                const newRemaining = originalQty - newDelivered;
+                const previousWt = parseFloat(modRecord.wt_percent) || 0;
+                const newWt = previousWt + inputWt;
+                const existingRecordId = modRecord.documentId;
+                await axios.put(
+                  `http://localhost:1337/api/project-item-modifieds/${existingRecordId}`,
+                  {
+                    data: {
+                      EnteredQuantity: previousEntered + inputQty,
+                      wt_percent: newWt,
+                      header_per_project_section: section.documentId,
+                      quantity: newRemaining,
+                      p_wt_percent: inputWt,
+                      P_EnteredQuantity: inputQty,
+                    }
+                  }
+                );
+              } else {
+                const newEntered = inputQty;
+                const newRemaining = originalQty - newEntered;
+                const newWt = inputWt;
+                await axios.post(
+                  `http://localhost:1337/api/project-item-modifieds`,
+                  {
+                    data: {
+                      EnteredQuantity: newEntered,
+                      wt_percent: newWt,
+                      header_per_project_section: section.documentId,
+                      itemno: item.itemno,
+                      quantity: newRemaining,
+                      p_wt_percent: inputWt,
+                      P_EnteredQuantity: inputQty,
+                    }
+                  }
+                );
+              }
+            }
+          }
+        }
+        // Update modified amounts after processing
+        await this.updateModifiedAmounts();
+        // Update header remaining values only when the submit button is clicked
+        await this.updateRemainingForAllSections();
+        alert('Data successfully updated!');
+      } catch (error) {
+        console.error('Error submitting data:', error);
+      }
     }
   },
   mounted() {
@@ -316,9 +350,9 @@ export default {
 <style scoped>
 th,
 td {
-  padding: 4px; /* Reduce padding */
+  padding: 4px;
   text-align: center;
-  font-size: 15px; /* Reduce font size */
+  font-size: 15px;
 }
 
 th {
@@ -327,9 +361,9 @@ th {
 
 table {
   background-color: #f4f4f4;
-  max-width: 90%; /* Reduce width */
+  max-width: 90%;
   margin: auto;
-  border-collapse: collapse; /* Reduce spacing between cells */
+  border-collapse: collapse;
 }
 
 .table-header {
@@ -342,7 +376,7 @@ table {
 }
 
 input {
-  width: 60px; /* Reduce input field width */
+  width: 60px;
 }
 
 .font-weight-bold {
@@ -356,8 +390,8 @@ input {
 
 button {
   display: block;
-  margin: 10px auto; /* Centers the button */
-  padding: 8px 16px; /* Adjust button size */
+  margin: 10px auto;
+  padding: 8px 16px;
   background-color: #066913;
   color: white;
   border: none;

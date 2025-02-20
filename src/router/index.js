@@ -5,6 +5,7 @@ import ProjectDashboard from '../components/ProjectDashboard.vue';
 import OriginalContract from '../components/OriginalContract.vue';
 import ProjectDetails from '../components/ProjectDetails.vue';
 import WorkAccomplished from '@/components/WorkAccomplished.vue';
+import WeeklyProgressReport from '@/components/WeeklyProgessReport.vue';
 
 Vue.use(Router);
 
@@ -36,6 +37,12 @@ export default new Router({
       name: 'WorkAccomplished',
       component: WorkAccomplished
     },
+    {
+      path: '/weekly-progress/:documentId',
+      name: 'WeeklyProgressReport',
+      component: WeeklyProgressReport
+    },
+
     // Add other routes as necessary
   ]
 });
