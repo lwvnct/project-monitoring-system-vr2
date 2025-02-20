@@ -4,7 +4,7 @@
       <!-- Project Header (using data from the first headerSection) -->
       <thead>
         <tr>
-          <th colspan="13" class="table-title">
+          <th colspan="13" class="table-title py-3">
             {{ project.projectName || 'Loading...' }}
           </th>
         </tr>
@@ -17,7 +17,7 @@
           <th rowspan="2">Project Duration:</th>
           <th rowspan="2" class="notBold">
             {{ project.projectDuration || 'Loading...' }}<br />
-            <span>Working Days</span>
+            <span class="smalltext">Working Days</span>
           </th>
           <th colspan="2">
             Start Date<br />
@@ -36,12 +36,12 @@
           <th>
             Actual Completion Date:<br />
             <span class="notBold">
-              {{ project.actualCompletionDate || 'Project not yet completed' }}
+              {{ project.actualCompletionDate || '--' }}
             </span>
           </th>
         </tr>
         <tr>
-          <th colspan="13" class="table-title">
+          <th colspan="13" class="smalltext">
             As of: _______________________
           </th>
         </tr>
@@ -58,6 +58,7 @@
           <th class="bgcolor" rowspan="2">ITEM DESCRIPTION</th>
           <th class="bgcolor" rowspan="2">DELIVERY DATE</th>
           <th class="bgcolor" rowspan="2">WT%</th>
+          <!-- THIS DATE ACTIVITY now displays both subDescription and its individual value -->
           <th class="bgcolor" rowspan="2">THIS DATE ACTIVITY</th>
           <th class="bgcolor" colspan="3">WORK PERCENTAGE</th>
           <th class="bgcolor" colspan="2" rowspan="2">PROBLEM ENCOUNTERED</th>
@@ -79,8 +80,8 @@
           <th class="wt-percent">
             {{ computeTotals(header).totalWTPercent !== null ? computeTotals(header).totalWTPercent : 'N/A' }}%
           </th>
-          <!-- THIS DATE ACTIVITY (empty) -->
-          <th></th>
+          <!-- THIS DATE ACTIVITY column now displays subDescriptions with individual values -->
+          <th class="notBold">{{ getThisDateActivity(header) }}</th>
           <!-- Empty cell before % PREV -->
           <th></th>
           <!-- % PREV Column -->
@@ -164,6 +165,21 @@ export default {
         0
       );
       return { totalWTPercent, totalPrevWTPercents };
+    },
+    // Extract subDescriptions with their individual values for items with new EnteredQuantity
+    getThisDateActivity(header) {
+      if (!header.items || !header.project_item_modifieds) return '';
+      const activities = header.project_item_modifieds
+        .filter(mod => Number(mod.P_EnteredQuantity) > 0)
+        .map(mod => {
+          const matchingItem = header.items.find(item => item.itemno === mod.itemno);
+          // Return a combined string with the subDescription and the individual value
+          return matchingItem && matchingItem.subDescription 
+            ? `${matchingItem.subDescription} (${mod.P_EnteredQuantity}%)` 
+            : '';
+        })
+        .filter(text => text !== '');
+      return activities.join(', ');
     }
   }
 };
@@ -194,12 +210,22 @@ export default {
 
 .table-title {
   font-weight: bold;
+  font-size: 1.2rem;
 }
 
-/* Center alignment for the dynamic cells */
+.vertical {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
 .wt-percent,
 .prev-wt-percent,
 .remaining-percent {
   text-align: center;
+  font-weight: normal;
+}
+
+.smalltext {
+  font-size: 0.8rem;
 }
 </style>
