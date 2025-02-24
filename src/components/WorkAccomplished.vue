@@ -240,15 +240,31 @@ export default {
       );
       return { totalWTPercent, totalPrevWTPercents };
     },
+
+    
+
     // Update the header's remaining value for all sections after submission
     async updateRemainingForAllSections() {
       for (const section of this.sections) {
-        const computed = this.computeTotals(section);
-        const computedPrev = computed.totalPrevWTPercents || 0;
-        const originalRemaining = Number(section.remaining) || 0;
-        const newRemaining = originalRemaining - computedPrev;
-        section.remaining = newRemaining;
         try {
+          // Retrieve the current remaining value from the API
+          const response = await axios.get(
+            `http://localhost:1337/api/header-per-project-sections/${section.documentId}`
+          );
+          let fetchedRemaining = 0;
+          if (response.data && response.data.data && response.data.data.attributes) {
+            fetchedRemaining = Number(response.data.data.attributes.remaining) || 0;
+          } else {
+            // Fallback to local section.remaining if API response is unexpected
+            fetchedRemaining = Number(section.remaining) || 0;
+          }
+          // Compute the totals to subtract
+          const computed = this.computeTotals(section);
+          const computedPrev = computed.totalPrevWTPercents || 0;
+          // Subtract the computed total from the fetched remaining value
+          const newRemaining = fetchedRemaining - computedPrev;
+          // Update the local section value and then update the database
+          section.remaining = newRemaining;
           await axios.put(
             `http://localhost:1337/api/header-per-project-sections/${section.documentId}`,
             {
@@ -258,13 +274,13 @@ export default {
             }
           );
           console.log(
-            "Remaining updated for section:",
+            "W.A Remaining updated for section:",
             section.documentId,
             newRemaining
           );
         } catch (error) {
           console.error(
-            "Error updating remaining for section:",
+            "W.A Error updating remaining for section:",
             section.documentId,
             error
           );
