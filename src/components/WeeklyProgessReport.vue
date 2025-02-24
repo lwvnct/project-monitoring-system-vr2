@@ -124,7 +124,8 @@ export default {
   data() {
     return {
       project: {},          // Project details (set from the first headerSection)
-      headerSections: []    // Array to hold all header sections
+      headerSections: [],   // Array to hold all header sections
+      isRemainingUpdated: false // Flag to ensure updateRemainingField runs only once
     };
   },
   mounted() {
@@ -144,7 +145,12 @@ export default {
           if (this.headerSections[0] && this.headerSections[0].project) {
             this.project = this.headerSections[0].project;
           }
-          // Note: Automatic update of "remaining" has been removed.
+          // Update the "remaining" field in the API if not already updated
+          if (!this.isRemainingUpdated) {
+            this.updateRemainingField();
+            this.isRemainingUpdated = true;
+            localStorage.setItem('isRemainingUpdated', 'true');
+          }
         }
       })
       .catch((error) => {
@@ -180,6 +186,30 @@ export default {
         })
         .filter(text => text !== '');
       return activities.join(', ');
+    },
+    // Update the "remaining" field in the API
+    updateRemainingField() {
+      this.headerSections.forEach(header => {
+        const totalWTPercent = this.computeTotals(header).totalWTPercent;
+        axios
+          .put(`http://localhost:1337/api/header-per-project-sections/${header.documentId}`, {
+            data: {
+              remaining: totalWTPercent !== null ? totalWTPercent : 'N/A'
+            }
+          })
+          .then(() => {
+            console.log(`Updated remaining field for header ${header.documentId}`);
+          })
+          .catch(error => {
+            console.error(`Error updating remaining field for header ${header.documentId}:`, error);
+          });
+      });
+    }
+  },
+  created() {
+    // Check if the page is refreshed
+    if (performance.navigation.type === 1) {
+      this.isRemainingUpdated = localStorage.getItem('isRemainingUpdated') === 'true';
     }
   }
 };

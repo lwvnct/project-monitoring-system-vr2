@@ -80,6 +80,7 @@
         </tr>
       </tfoot>
     </table>
+    <button @click="refreshWorkspace" class="refresh-btn">Refresh Workspace</button>
   </div>
 </template>
 
@@ -91,7 +92,6 @@ export default {
   data() {
     return {
       sections: [],
-      // This will store the modified items from the API.
       projectItemModifieds: []
     };
   },

@@ -169,11 +169,11 @@ export default {
 
 /* Background Image Blended with Background Color */
 .app {
-  background-color: #bfbebe;
+  /*background-color: #bfbebe;*/
   background-image: url('@/assets/caraga-state-university bg.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  background-blend-mode: overlay; /*Blends the image with the color */ 
+  /*background-blend-mode: overlay; /*Blends the image with the color */ 
 }
 </style>

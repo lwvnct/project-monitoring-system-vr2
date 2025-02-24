@@ -6,15 +6,15 @@
       <form @submit.prevent="submitSection">
         <div class="form-group">
           <label for="letterLabel">Letter Label</label>
-          <input v-model="formData.letter_label_for_item_no" id="letterLabel" type="text" required />
+          <input v-model="formData.letter_label_for_item_no" id="letterLabel" type="text" required @input="disableProjectItemButton" />
         </div>
 
         <div class="form-group">
           <label for="mainDescription">Main Description</label>
-          <input v-model="formData.mainDescription" id="mainDescription" type="text" required />
+          <input v-model="formData.mainDescription" id="mainDescription" type="text" required @input="disableProjectItemButton" />
         </div>
 
-        <button type="submit" class="btn mt-5">Submit Section</button>
+        <button type="submit" class="btn mt-5" :disabled="isSubmitting">Submit Section</button>
       </form>
     </div>
 
@@ -63,7 +63,7 @@
             </div>
           </div>
   
-          <button type="submit" class="btn mt-5" :disabled="!sectionId">Submit Item</button>
+          <button type="submit" class="btn mt-5" id="orange" :disabled="!sectionId || isSubmitting || isProjectItemButtonDisabled" @focus="enableProjectItemButton">Submit Item</button>
       </form>
     </div>
   </div>
@@ -93,6 +93,8 @@ export default {
         header_per_project_section: null,
       },
       sectionId: null,
+      isSubmitting: false, // Add this line
+      isProjectItemButtonDisabled: false, // Add this line
     };
   },
   created() {
@@ -109,7 +111,15 @@ export default {
     }
   },
   methods: {
+    disableProjectItemButton() {
+      this.isProjectItemButtonDisabled = true;
+    },
+    enableProjectItemButton() {
+      this.isProjectItemButtonDisabled = false;
+    },
     async submitSection() {
+      if (this.isSubmitting) return; // Prevent multiple submissions
+      this.isSubmitting = true;
       try {
         console.log("Submitting section with:", this.formData);
 
@@ -124,14 +134,19 @@ export default {
         this.sectionId = sectionResponse.data.data.id;
         this.projectItem.header_per_project_section = this.sectionId;
 
+        this.isProjectItemButtonDisabled = false; // Enable the button after successful submission
         alert("Project Section submitted successfully!");
       } catch (error) {
         console.error("Error submitting section:", error.response?.data || error);
         alert("Failed to submit project section.");
+      } finally {
+        this.isSubmitting = false;
       }
     },
 
     async submitProjectItem() {
+      if (this.isSubmitting) return; // Prevent multiple submissions
+      this.isSubmitting = true;
       try {
         if (!this.sectionId) {
           alert("Please submit the Project Section first.");
@@ -155,6 +170,8 @@ export default {
       } catch (error) {
         console.error("Error submitting project item:", error.response?.data || error);
         alert("Failed to submit project item.");
+      } finally {
+        this.isSubmitting = false;
       }
     },
   },
@@ -208,7 +225,7 @@ input:disabled {
 .btn {
   width: 100%;
   padding: 10px;
-  background: #007bff;
+  background: #066913;
   color: white;
   border: none;
   border-radius: 5px;
@@ -227,5 +244,10 @@ input:disabled {
   color: #856404;
   margin-bottom: 5px;
   border-radius: 5px;
+}
+
+#orange {
+  background:rgb(255, 179, 1);
+  color: black;
 }
 </style>

@@ -38,10 +38,13 @@ export default {
         startDate: "",
         dueDate: "",
       },
+      isSubmitting: false,
     };
   },
   methods: {
     async submitForm() {
+      if (this.isSubmitting) return;
+      this.isSubmitting = true;
       try {
         if (this.project.totalProjectAmount) {
           this.project.totalProjectAmount = Number(
@@ -88,6 +91,8 @@ export default {
         alert(
           `Failed to submit project: ${error.response?.data?.error?.message || "Unknown error"}`
         );
+      } finally {
+        this.isSubmitting = false;
       }
     },
     formatLabel(key) {
@@ -194,7 +199,7 @@ input:focus {
 .btn {
   width: 100%;
   padding: 12px;
-  background-color: #007bff;
+  background-color: #066913;
   color: white;
   border: none;
   border-radius: 4px;
@@ -205,7 +210,7 @@ input:focus {
 }
 
 .btn:hover {
-  background-color: #0056b3;
+  background-color: #085b14;
 }
 
 @media (max-width: 600px) {
