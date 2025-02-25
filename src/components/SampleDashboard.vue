@@ -86,9 +86,7 @@
                 <v-icon>mdi-calendar-clock</v-icon>
               </v-btn>
             </router-link>
-
           </v-card-actions>
-
         </v-card>
       </v-col>
     </v-row>
@@ -102,7 +100,8 @@ export default {
   name: 'SampleDashboard',
   data() {
     return {
-      search: '',
+      // Set initial search value from localStorage, if available
+      search: localStorage.getItem('searchText') || '',
       projects: []
     };
   },
@@ -114,6 +113,12 @@ export default {
         project.projectLocation.toLowerCase().includes(searchLower) ||
         (project.sourceOfFund && project.sourceOfFund.toLowerCase().includes(searchLower))
       );
+    }
+  },
+  watch: {
+    // Watch for changes in search and save to localStorage
+    search(newVal) {
+      localStorage.setItem('searchText', newVal);
     }
   },
   methods: {

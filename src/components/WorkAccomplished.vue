@@ -1,6 +1,9 @@
 <template>
   <div>
-    <table border="1" class="mx-auto mt-5">
+    <div class="ps-15 mt-5 notification" @click="redirectToWeeklyProgressReport">
+      <p class="text-center">Please CLICK here go to the Weekly Progress Report page BEFORE SUBMITTING data.(ONLY ONCE)</p>
+    </div>
+    <table border="1" class="mx-auto ">
       <thead>
         <tr>
           <th colspan="16" class="table-header">WORK ACCOMPLISHED REPORT</th>
@@ -287,6 +290,9 @@ export default {
         }
       }
     },
+    redirectToWeeklyProgressReport() {
+      this.$router.push({ name: 'WeeklyProgressReport' });
+    },
     async submitData() {
       try {
         // Loop through each section and its items to update modifications
@@ -423,5 +429,14 @@ button:hover {
 
 .field {
   background-color: rgb(221, 220, 216);
+}
+
+.notification {
+  background: #f61616;
+  cursor: pointer;
+}
+
+p {
+  color: white;
 }
 </style>
