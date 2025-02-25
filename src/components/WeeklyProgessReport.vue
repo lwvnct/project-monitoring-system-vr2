@@ -1,6 +1,6 @@
 <template>
   <div>
-    <table class="progress-table mx-auto mt-5">
+    <table class="progress-table mx-auto my-5">
       <!-- Project Header (using data from the first headerSection) -->
       <thead>
         <tr>
@@ -42,7 +42,7 @@
         </tr>
         <tr>
           <th colspan="13" class="smalltext">
-            As of: _______________________
+            As of: <input type="date" v-model="asOf" placeholder="Enter as of date" /> - <input type="date" v-model="asOf" placeholder="Enter as of date" />
           </th>
         </tr>
         <tr>
@@ -53,49 +53,65 @@
       <!-- WORK PROGRESS Section -->
       <thead>
         <tr>
-          <!-- Vertical header spans 5 rows -->
-          <th class="vertical" rowspan="5">WORK PROGRESS</th>
+          <th class="vertical" rowspan="2">WORK PROGRESS</th>
           <th class="bgcolor" rowspan="2">ITEM DESCRIPTION</th>
           <th class="bgcolor" rowspan="2">DELIVERY DATE</th>
           <th class="bgcolor" rowspan="2">WT%</th>
-          <!-- THIS DATE ACTIVITY now displays both subDescription and its individual value -->
           <th class="bgcolor" rowspan="2">THIS DATE ACTIVITY</th>
           <th class="bgcolor" colspan="3">WORK PERCENTAGE</th>
-          <th class="bgcolor" colspan="2" rowspan="2">PROBLEM ENCOUNTERED</th>
+          <!-- Unmerged PROBLEM ENCOUNTERED header -->
+          <th class="bgcolor" rowspan="2">PROBLEM ENCOUNTERED</th>
         </tr>
         <tr>
           <th class="bgcolor">% PREV</th>
           <th class="bgcolor">THIS DATE</th>
           <th class="bgcolor">REMAINING %</th>
         </tr>
+      </thead>
+      <tbody>
         <!-- New row for each headerSection -->
         <tr v-for="header in headerSections" :key="header.id">
+          <!-- Extra empty cell to align with the vertical header -->
+          <td></td>
           <!-- ITEM DESCRIPTION -->
-          <th class="notBold">
+          <td class="notBold">
             {{ header.mainDescription || 'Loading...' }}
-          </th>
+          </td>
           <!-- DELIVERY DATE (empty) -->
-          <th></th>
+          <td></td>
           <!-- WT% Column -->
-          <th class="wt-percent">
-            {{ computeTotals(header).totalWTPercent !== null ? computeTotals(header).totalWTPercent : 'N/A' }}%
-          </th>
-          <!-- THIS DATE ACTIVITY column now displays subDescriptions with individual values -->
-          <th class="notBold">{{ getThisDateActivity(header) }}</th>
+          <td class="wt-percent">
+            {{
+              computeTotals(header).totalWTPercent !== null
+                ? computeTotals(header).totalWTPercent
+                : 'N/A'
+            }}%
+          </td>
+          <!-- THIS DATE ACTIVITY -->
+          <td class="notBold">{{ getThisDateActivity(header) }}</td>
           <!-- Empty cell before % PREV -->
-          <th></th>
+          <td></td>
           <!-- % PREV Column -->
-          <th class="prev-wt-percent">
-            {{ computeTotals(header).totalPrevWTPercents !== null ? computeTotals(header).totalPrevWTPercents : 'N/A' }}%
-          </th>
+          <td class="prev-wt-percent">
+            {{
+              computeTotals(header).totalPrevWTPercents !== null
+                ? computeTotals(header).totalPrevWTPercents
+                : 'N/A'
+            }}%
+          </td>
           <!-- REMAINING % Column -->
-          <th class="remaining-percent">
+          <td class="remaining-percent">
             {{ header.remaining || 'Loading...' }}
-          </th>
-          <!-- PROBLEM ENCOUNTERED (empty) -->
-          <th></th>
+          </td>
+          <!-- New TD for PROBLEM ENCOUNTERED (each row gets its own value) -->
+          <td class="problem-cell">
+            <textarea
+              v-model="header.problemEncountered"
+              placeholder="Enter problem encountered"
+            ></textarea>
+          </td>
         </tr>
-      </thead>
+      </tbody>
 
       <!-- MAN POWER PROGRESS Section -->
       <thead>
@@ -111,8 +127,63 @@
           <th class="bgcolor">BEFORE</th>
           <th class="bgcolor">AFTER</th>
         </tr>
+        <!-- New row with input fields for manpower progress -->
+        <tr>
+          <td></td>
+          <td>
+            <input
+              type="text"
+              v-model="manpowerDesignation"
+              placeholder="Enter designation"
+            />
+          </td>
+          <td>
+            <!-- Use .number modifier so the value is sent as a number -->
+            <input
+              type="number"
+              v-model.number="noOfManpower"
+              placeholder="Enter number"
+            />
+          </td>
+          <td>
+            <input
+              type="text"
+              v-model="nameOfPersonel"
+              placeholder="Enter personnel name"
+            />
+          </td>
+          <td colspan="3">
+            <textarea
+              type="text"
+              v-model="workDoneOrInProgress"
+              placeholder="Enter work progress"
+              style="width: 100%"
+            ></textarea>
+          </td>
+          <td>
+            <label class="custom-file-upload">
+              <input type="file" />
+              Upload Before
+            </label>
+          </td>
+          <td>
+            <label class="custom-file-upload">
+              <input type="file" />
+              Upload After
+            </label>
+          </td>
+        </tr>
       </thead>
     </table>
+    <!-- Global Submit Buttons for Manpower Progress and Problem Encountered Fields -->
+    <div class="text-center my-3">
+      <button type="button" @click="submitManpowerProgress">
+        Submit Manpower Progress
+      </button>
+      <button type="button" @click="submitAllProblemUpdates">
+        Submit Problem Updates
+      </button>
+    </div>
   </div>
 </template>
 
@@ -125,7 +196,14 @@ export default {
     return {
       project: {},          // Project details (set from the first headerSection)
       headerSections: [],   // Array to hold all header sections
-      isRemainingUpdated: false // Flag to ensure updateRemainingField runs only once
+      isRemainingUpdated: false, // Flag to ensure updateRemainingField runs only once
+      asOf: '',
+      manpowerDesignation: '',
+      noOfManpower: '', // Will be converted to number via v-model.number
+      nameOfPersonel: '',
+      workDoneOrInProgress: '',
+      before: '',
+      after: ''
     };
   },
   mounted() {
@@ -140,7 +218,13 @@ export default {
           response.data.data &&
           response.data.data.length > 0
         ) {
-          this.headerSections = response.data.data;
+          // Initialize each header with its own problemEncountered property.
+          this.headerSections = response.data.data.map(header => {
+            return {
+              ...header,
+              problemEncountered: header.problemEncountered || ''
+            };
+          });
           // Use the first headerSection's project details for the header
           if (this.headerSections[0] && this.headerSections[0].project) {
             this.project = this.headerSections[0].project;
@@ -151,11 +235,14 @@ export default {
               // After updateRemainingField runs successfully,
               // perform the check for page refresh (previously in created())
               if (performance.navigation.type === 1) {
-                this.isRemainingUpdated = localStorage.getItem('isRemainingUpdated') === 'true';
+                this.isRemainingUpdated =
+                  localStorage.getItem('isRemainingUpdated') === 'true';
               }
             });
           } else {
-            console.log("updateRemainingField did not run automatically because it has already been updated.");
+            console.log(
+              "updateRemainingField did not run automatically because it has already been updated."
+            );
           }
         }
       })
@@ -192,46 +279,109 @@ export default {
         .filter(text => text !== '');
       return activities.join(', ');
     },
-    // Update the "remaining" field in the API using the computed WT% value
-  // This method returns a promise that resolves when all PUT requests are complete
-  updateRemainingField() {
-    if (this.isRemainingUpdated) {
-      console.log("updateRemainingField did not run automatically because it has already been updated.");
-      return Promise.resolve(); // Prevent multiple executions
-    }
-
-    const updatePromises = this.headerSections.map(header => {
-      // Check if the remaining field has already been updated
-      if (header.remaining !== undefined && header.remaining !== null) {
-        console.log(`Skipping update for header ${header.documentId} as it has already been updated.`);
-        return Promise.resolve();
+    // Update the "remaining" field in the API using the computed WT% value.
+    // This method returns a promise that resolves when all PUT requests are complete.
+    updateRemainingField() {
+      if (this.isRemainingUpdated) {
+        console.log(
+          "updateRemainingField did not run automatically because it has already been updated."
+        );
+        return Promise.resolve(); // Prevent multiple executions
       }
-
-      const totalWTPercent = this.computeTotals(header).totalWTPercent;
-      const remainingValue = totalWTPercent !== null ? totalWTPercent : 'N/A';
-      return axios
-        .put(`http://localhost:1337/api/header-per-project-sections/${header.documentId}`, {
-          data: {
-            remaining: remainingValue
-          }
-        })
+  
+      const updatePromises = this.headerSections.map(header => {
+        // Check if the remaining field has already been updated
+        if (header.remaining !== undefined && header.remaining !== null) {
+          console.log(
+            `Skipping update for header ${header.documentId} as it has already been updated.`
+          );
+          return Promise.resolve();
+        }
+  
+        const totalWTPercent = this.computeTotals(header).totalWTPercent;
+        const remainingValue =
+          totalWTPercent !== null ? totalWTPercent : 'N/A';
+        return axios
+          .put(`http://localhost:1337/api/header-per-project-sections/${header.documentId}`, {
+            data: {
+              remaining: remainingValue
+            }
+          })
+          .then(() => {
+            // Update the local header object so the UI shows the new remaining value
+            header.remaining = remainingValue;
+            console.log(`WPR Update remaining: ${remainingValue}`);
+          })
+          .catch(error => {
+            console.error(
+              `Error updating remaining for header ${header.documentId}:`,
+              error
+            );
+          });
+      });
+  
+      // Wait for all updates to finish before setting the flag
+      return Promise.all(updatePromises).then(() => {
+        this.isRemainingUpdated = true;
+        localStorage.setItem('isRemainingUpdated', 'true');
+      });
+    },
+    // Submit updates for all problemEncountered fields for each headerSection.
+    submitAllProblemUpdates() {
+      const updatePromises = this.headerSections.map(header => {
+        return axios
+          .put(`http://localhost:1337/api/header-per-project-sections/${header.documentId}`, {
+            data: {
+              problem_encountered: header.problemEncountered
+            }
+          })
+          .then(() => {
+            console.log(`Updated problem encountered for header ${header.documentId}`);
+          })
+          .catch(error => {
+            console.error(`Error updating problem encountered for header ${header.documentId}:`, error);
+            return Promise.reject(error);
+          });
+      });
+  
+      Promise.all(updatePromises)
         .then(() => {
-          // Update the local header object so the UI shows the new remaining value
-          header.remaining = remainingValue;
-          console.log(`WPR Update remaining: ${remainingValue}`);
+          alert("All problem encountered fields updated successfully.");
         })
-        .catch(error => {
-          console.error(`Error updating remaining for header ${header.documentId}:`, error);
+        .catch(() => {
+          alert("An error occurred while updating one or more problem encountered fields.");
         });
-    });
-
-    // Wait for all updates to finish before setting the flag
-    return Promise.all(updatePromises).then(() => {
-      this.isRemainingUpdated = true;
-      localStorage.setItem('isRemainingUpdated', 'true');
-    });
-  },
-
+    },
+    // Submit manpower progress to the API with relation to the project.
+    // Added alert notifications to indicate success or error.
+    submitManpowerProgress() {
+      const payload = {
+        data: {
+          manpower_designation: this.manpowerDesignation,
+          no_of_manpower: this.noOfManpower,
+          name_of_personel: this.nameOfPersonel,
+          work_done: this.workDoneOrInProgress,
+          project: this.project.id  // Pass the related project ID
+        }
+      };
+      console.log('Payload for manpower progress:', payload); // Optional: verify payload
+      
+      axios
+        .post('http://localhost:1337/api/manpower-progresses', payload)
+        .then((response) => {
+          console.log('Manpower progress added successfully:', response.data);
+          alert("Manpower progress submitted successfully!");
+          // Optionally, reset the input fields after a successful submission:
+          this.manpowerDesignation = '';
+          this.noOfManpower = '';
+          this.nameOfPersonel = '';
+          this.workDoneOrInProgress = '';
+        })
+        .catch((error) => {
+          console.error('Error adding manpower progress:', error);
+          alert("Error submitting manpower progress. Please try again.");
+        });
+    }
   }
 };
 </script>
@@ -267,6 +417,7 @@ export default {
 .vertical {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
+  font-size: small;
 }
 
 .wt-percent,
@@ -278,5 +429,41 @@ export default {
 
 .smalltext {
   font-size: 0.8rem;
+}
+
+input[type="text"],
+input[type="number"] {
+  width: 100%;
+  padding: 2px;
+  box-sizing: border-box;
+}
+
+.custom-file-upload {
+  display: inline-block;
+  padding: 6px 12px;
+  cursor: pointer;
+  background-color: #f4f4f4;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.custom-file-upload input[type="file"] {
+  display: none;
+}
+
+/* Style for the submit buttons */
+button {
+  padding: 10px 20px;
+  font-size: 1rem;
+  background-color: #007bff;
+  border: none;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  margin: 0 5px;
+}
+
+button:hover {
+  background-color: #0056b3;
 }
 </style>
