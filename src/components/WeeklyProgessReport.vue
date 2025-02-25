@@ -42,7 +42,9 @@
         </tr>
         <tr>
           <th colspan="13" class="smalltext">
-            As of: <input type="date" v-model="asOf" placeholder="Enter as of date" /> - <input type="date" v-model="asOf" placeholder="Enter as of date" />
+            As of:
+            <input type="date" v-model="asOf" placeholder="Enter as of date" /> -
+            <input type="date" v-model="asOf" placeholder="Enter as of date" />
           </th>
         </tr>
         <tr>
@@ -59,7 +61,6 @@
           <th class="bgcolor" rowspan="2">WT%</th>
           <th class="bgcolor" rowspan="2">THIS DATE ACTIVITY</th>
           <th class="bgcolor" colspan="3">WORK PERCENTAGE</th>
-          <!-- Unmerged PROBLEM ENCOUNTERED header -->
           <th class="bgcolor" rowspan="2">PROBLEM ENCOUNTERED</th>
         </tr>
         <tr>
@@ -69,17 +70,12 @@
         </tr>
       </thead>
       <tbody>
-        <!-- New row for each headerSection -->
         <tr v-for="header in headerSections" :key="header.id">
-          <!-- Extra empty cell to align with the vertical header -->
           <td></td>
-          <!-- ITEM DESCRIPTION -->
           <td class="notBold">
             {{ header.mainDescription || 'Loading...' }}
           </td>
-          <!-- DELIVERY DATE (empty) -->
           <td></td>
-          <!-- WT% Column -->
           <td class="wt-percent">
             {{
               computeTotals(header).totalWTPercent !== null
@@ -87,11 +83,8 @@
                 : 'N/A'
             }}%
           </td>
-          <!-- THIS DATE ACTIVITY -->
           <td class="notBold">{{ getThisDateActivity(header) }}</td>
-          <!-- Empty cell before % PREV -->
           <td></td>
-          <!-- % PREV Column -->
           <td class="prev-wt-percent">
             {{
               computeTotals(header).totalPrevWTPercents !== null
@@ -99,11 +92,9 @@
                 : 'N/A'
             }}%
           </td>
-          <!-- REMAINING % Column -->
           <td class="remaining-percent">
             {{ header.remaining || 'Loading...' }}
           </td>
-          <!-- New TD for PROBLEM ENCOUNTERED (each row gets its own value) -->
           <td class="problem-cell">
             <textarea
               v-model="header.problemEncountered"
@@ -127,7 +118,6 @@
           <th class="bgcolor">BEFORE</th>
           <th class="bgcolor">AFTER</th>
         </tr>
-        <!-- New row with input fields for manpower progress -->
         <tr>
           <td></td>
           <td>
@@ -138,7 +128,6 @@
             />
           </td>
           <td>
-            <!-- Use .number modifier so the value is sent as a number -->
             <input
               type="number"
               v-model.number="noOfManpower"
@@ -160,17 +149,41 @@
               style="width: 100%"
             ></textarea>
           </td>
+          <!-- Custom File Input for Before Image (without Browse button) -->
           <td>
-            <label class="custom-file-upload">
-              <input type="file" />
-              Upload Before
-            </label>
+            <div class="custom-file-input">
+              <input
+                type="file"
+                ref="beforeFileInput"
+                @change="handleBeforeFileChange"
+                style="display: none;"
+              />
+              <input
+                type="text"
+                :value="beforeFileName"
+                readonly
+                placeholder="No file chosen"
+                @click="triggerBeforeFileInput"
+              />
+            </div>
           </td>
+          <!-- Custom File Input for After Image (without Browse button) -->
           <td>
-            <label class="custom-file-upload">
-              <input type="file" />
-              Upload After
-            </label>
+            <div class="custom-file-input">
+              <input
+                type="file"
+                ref="afterFileInput"
+                @change="handleAfterFileChange"
+                style="display: none;"
+              />
+              <input
+                type="text"
+                :value="afterFileName"
+                readonly
+                placeholder="No file chosen"
+                @click="triggerAfterFileInput"
+              />
+            </div>
           </td>
         </tr>
       </thead>
@@ -196,14 +209,18 @@ export default {
     return {
       project: {},          // Project details (set from the first headerSection)
       headerSections: [],   // Array to hold all header sections
-      isRemainingUpdated: false, // Flag to ensure updateRemainingField runs only once
+      isRemainingUpdated: false,
       asOf: '',
       manpowerDesignation: '',
-      noOfManpower: '', // Will be converted to number via v-model.number
+      noOfManpower: '',
       nameOfPersonel: '',
       workDoneOrInProgress: '',
-      before: '',
-      after: ''
+      // Uploaded file data arrays (for use in the payload)
+      beforeUploadedFiles: [],
+      afterUploadedFiles: [],
+      // File name to display in the text field
+      beforeFileName: '',
+      afterFileName: ''
     };
   },
   mounted() {
@@ -232,8 +249,6 @@ export default {
           // Only update the "remaining" field if it hasn't been updated before
           if (!this.isRemainingUpdated) {
             this.updateRemainingField().then(() => {
-              // After updateRemainingField runs successfully,
-              // perform the check for page refresh (previously in created())
               if (performance.navigation.type === 1) {
                 this.isRemainingUpdated =
                   localStorage.getItem('isRemainingUpdated') === 'true';
@@ -280,47 +295,33 @@ export default {
       return activities.join(', ');
     },
     // Update the "remaining" field in the API using the computed WT% value.
-    // This method returns a promise that resolves when all PUT requests are complete.
     updateRemainingField() {
       if (this.isRemainingUpdated) {
-        console.log(
-          "updateRemainingField did not run automatically because it has already been updated."
-        );
-        return Promise.resolve(); // Prevent multiple executions
+        console.log("updateRemainingField did not run automatically because it has already been updated.");
+        return Promise.resolve();
       }
   
       const updatePromises = this.headerSections.map(header => {
-        // Check if the remaining field has already been updated
         if (header.remaining !== undefined && header.remaining !== null) {
-          console.log(
-            `Skipping update for header ${header.documentId} as it has already been updated.`
-          );
+          console.log(`Skipping update for header ${header.documentId} as it has already been updated.`);
           return Promise.resolve();
         }
   
         const totalWTPercent = this.computeTotals(header).totalWTPercent;
-        const remainingValue =
-          totalWTPercent !== null ? totalWTPercent : 'N/A';
+        const remainingValue = totalWTPercent !== null ? totalWTPercent : 'N/A';
         return axios
           .put(`http://localhost:1337/api/header-per-project-sections/${header.documentId}`, {
-            data: {
-              remaining: remainingValue
-            }
+            data: { remaining: remainingValue }
           })
           .then(() => {
-            // Update the local header object so the UI shows the new remaining value
             header.remaining = remainingValue;
             console.log(`WPR Update remaining: ${remainingValue}`);
           })
           .catch(error => {
-            console.error(
-              `Error updating remaining for header ${header.documentId}:`,
-              error
-            );
+            console.error(`Error updating remaining for header ${header.documentId}:`, error);
           });
       });
   
-      // Wait for all updates to finish before setting the flag
       return Promise.all(updatePromises).then(() => {
         this.isRemainingUpdated = true;
         localStorage.setItem('isRemainingUpdated', 'true');
@@ -331,9 +332,7 @@ export default {
       const updatePromises = this.headerSections.map(header => {
         return axios
           .put(`http://localhost:1337/api/header-per-project-sections/${header.documentId}`, {
-            data: {
-              problem_encountered: header.problemEncountered
-            }
+            data: { problem_encountered: header.problemEncountered }
           })
           .then(() => {
             console.log(`Updated problem encountered for header ${header.documentId}`);
@@ -352,8 +351,65 @@ export default {
           alert("An error occurred while updating one or more problem encountered fields.");
         });
     },
-    // Submit manpower progress to the API with relation to the project.
-    // Added alert notifications to indicate success or error.
+    // Methods for the custom "Before" file input:
+    triggerBeforeFileInput() {
+      this.$refs.beforeFileInput.click();
+    },
+    handleBeforeFileChange(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      this.beforeFileName = file.name; // Show the file name in the text field
+      this.uploadBeforeImage(file);
+    },
+    uploadBeforeImage(file) {
+      const formData = new FormData();
+      formData.append('files', file);
+      
+      axios
+        .post('http://localhost:1337/api/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+        .then(response => {
+          console.log('Before image uploaded:', response.data);
+          alert('Before image uploaded successfully!');
+          // Save the returned file data (an array) for later use in the payload.
+          this.beforeUploadedFiles = response.data;
+        })
+        .catch(error => {
+          console.error('Error uploading before image:', error);
+          alert('Error uploading before image.');
+        });
+    },
+    // Methods for the custom "After" file input:
+    triggerAfterFileInput() {
+      this.$refs.afterFileInput.click();
+    },
+    handleAfterFileChange(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      this.afterFileName = file.name; // Show the file name in the text field
+      this.uploadAfterImage(file);
+    },
+    uploadAfterImage(file) {
+      const formData = new FormData();
+      formData.append('files', file);
+      
+      axios
+        .post('http://localhost:1337/api/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+        .then(response => {
+          console.log('After image uploaded:', response.data);
+          alert('After image uploaded successfully!');
+          // Save the returned file data for later use in the payload.
+          this.afterUploadedFiles = response.data;
+        })
+        .catch(error => {
+          console.error('Error uploading after image:', error);
+          alert('Error uploading after image.');
+        });
+    },
+    // Submit manpower progress to the API with relation to the project and include uploaded images.
     submitManpowerProgress() {
       const payload = {
         data: {
@@ -361,21 +417,31 @@ export default {
           no_of_manpower: this.noOfManpower,
           name_of_personel: this.nameOfPersonel,
           work_done: this.workDoneOrInProgress,
-          project: this.project.id  // Pass the related project ID
+          project: this.project.id,
+          before_image: this.beforeUploadedFiles.length
+            ? this.beforeUploadedFiles.map(file => file.id)
+            : [],
+          after_image: this.afterUploadedFiles.length
+            ? this.afterUploadedFiles.map(file => file.id)
+            : []
         }
       };
-      console.log('Payload for manpower progress:', payload); // Optional: verify payload
+      console.log('Payload for manpower progress:', payload);
       
       axios
         .post('http://localhost:1337/api/manpower-progresses', payload)
         .then((response) => {
           console.log('Manpower progress added successfully:', response.data);
           alert("Manpower progress submitted successfully!");
-          // Optionally, reset the input fields after a successful submission:
+          // Reset input fields and uploaded file data
           this.manpowerDesignation = '';
           this.noOfManpower = '';
           this.nameOfPersonel = '';
           this.workDoneOrInProgress = '';
+          this.beforeUploadedFiles = [];
+          this.afterUploadedFiles = [];
+          this.beforeFileName = '';
+          this.afterFileName = '';
         })
         .catch((error) => {
           console.error('Error adding manpower progress:', error);
@@ -432,26 +498,27 @@ export default {
 }
 
 input[type="text"],
-input[type="number"] {
+input[type="number"],
+input[type="date"] {
   width: 100%;
   padding: 2px;
   box-sizing: border-box;
 }
 
-.custom-file-upload {
-  display: inline-block;
-  padding: 6px 12px;
-  cursor: pointer;
-  background-color: #f4f4f4;
+.custom-file-input {
+  display: flex;
+  align-items: center;
+}
+
+.custom-file-input input[type="text"] {
+  flex: 1;
+  padding: 6px;
   border: 1px solid #ccc;
   border-radius: 4px;
+  cursor: pointer;
+  background-color: #fff;
 }
 
-.custom-file-upload input[type="file"] {
-  display: none;
-}
-
-/* Style for the submit buttons */
 button {
   padding: 10px 20px;
   font-size: 1rem;
