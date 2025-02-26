@@ -6,6 +6,7 @@ import OriginalContract from '../components/OriginalContract.vue';
 import ProjectDetails from '../components/ProjectDetails.vue';
 import WorkAccomplished from '@/components/WorkAccomplished.vue';
 import WeeklyProgressReport from '@/components/WeeklyProgessReport.vue';
+import ViewWeeklyProgressReport from '@/components/ViewWeeklyProgressReport.vue';
 
 Vue.use(Router);
 
@@ -41,6 +42,11 @@ export default new Router({
       path: '/weekly-progress/:documentId',
       name: 'WeeklyProgressReport',
       component: WeeklyProgressReport
+    },
+    {
+      path: '/view-weekly-progress/:documentId',
+      name: 'ViewWeeklyProgressReport',
+      component: ViewWeeklyProgressReport
     },
 
     // Add other routes as necessary

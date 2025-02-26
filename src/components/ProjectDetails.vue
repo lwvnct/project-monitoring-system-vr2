@@ -1,5 +1,8 @@
 <template>
   <div>
+    <button @click="redirectToViewWeeklyProgressReport" class="redirect-btn">
+      View Weekly Progress Report
+    </button>
     <table border="1" class="mx-auto mt-5">
       <thead>
         <tr>
@@ -80,7 +83,9 @@
         </tr>
       </tfoot>
     </table>
-    <button @click="refreshWorkspace" class="refresh-btn">Refresh Workspace</button>
+    <!-- <button @click="refreshWorkspace" class="refresh-btn">Refresh Workspace</button>
+    <button @click="redirectToWeeklyProgressReport" class="redirect-btn">View Weekly Progress Report</button> -->
+    <!-- <button @click="redirectToViewWeeklyProgressReport" class="redirect-btn">View Weekly Progress Report</button> -->
   </div>
 </template>
 
@@ -251,6 +256,10 @@ export default {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       });
+    },
+    redirectToViewWeeklyProgressReport() {
+      const documentId = this.$route.params.documentId;
+      this.$router.push({ name: 'ViewWeeklyProgressReport', params: { documentId } });
     }
   },
   mounted() {
@@ -301,5 +310,14 @@ table {
 
 .bg-light {
   background-color: #f8f9fa;
+}
+
+.redirect-btn {
+  background: #0a50e8;
+  margin-left: 63px;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 5px;
+  color: white;
 }
 </style>

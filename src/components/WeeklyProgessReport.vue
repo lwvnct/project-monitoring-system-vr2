@@ -4,6 +4,11 @@
       <!-- Project Header (using data from the first headerSection) -->
       <thead>
         <tr>
+          <th colspan="13" class="bgcolor table-title py-3">
+            WEEKLY PROGRESS REPORT
+          </th>
+        </tr>
+        <tr>
           <th colspan="13" class="table-title py-3">
             {{ project.projectName || 'Loading...' }}
           </th>
@@ -40,11 +45,15 @@
             </span>
           </th>
         </tr>
+        <!-- Wrap the date inputs in a flex container -->
         <tr>
           <th colspan="13" class="smalltext">
             As of:
-            <input type="date" v-model="asOf" placeholder="Enter as of date" /> -
-            <input type="date" v-model="asOf" placeholder="Enter as of date" />
+            <span class="date-inputs">
+              <input type="date" v-model="asOf" placeholder="Enter as of date" /> 
+              -
+              <input type="date" v-model="asOf" placeholder="Enter as of date" />
+            </span>
           </th>
         </tr>
         <tr>
@@ -190,12 +199,13 @@
     </table>
     <!-- Global Submit Buttons for Manpower Progress and Problem Encountered Fields -->
     <div class="text-center my-3">
-      <button type="button" @click="submitManpowerProgress">
-        Submit Manpower Progress
-      </button>
       <button type="button" @click="submitAllProblemUpdates">
         Submit Problem Updates
       </button>
+      <button type="button" @click="submitManpowerProgress">
+        Submit Manpower Progress
+      </button>
+      
     </div>
   </div>
 </template>
@@ -495,6 +505,13 @@ export default {
 
 .smalltext {
   font-size: 0.8rem;
+}
+
+/* Style for inline date inputs */
+.date-inputs {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
 }
 
 input[type="text"],
