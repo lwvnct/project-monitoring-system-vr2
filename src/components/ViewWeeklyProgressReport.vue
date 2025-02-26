@@ -1,7 +1,7 @@
 <template>
   <div>
     <table class="progress-table mx-auto my-5">
-      <!-- Project Header -->
+      <!-- Project Header Section -->
       <thead>
         <tr>
           <th colspan="13" class="bgcolor table-title py-3">
@@ -45,7 +45,6 @@
             </span>
           </th>
         </tr>
-        <!-- Removed the "As of:" input row -->
         <tr>
           <th colspan="13" class="table-title">MATERIAL PROGRESS</th>
         </tr>
@@ -125,22 +124,32 @@
           <td>
             <img
               v-if="manpowerProgress.before_image && manpowerProgress.before_image.length"
-              :src="manpowerProgress.before_image[0].url"
+              :src="getImageUrl(manpowerProgress.before_image[0])"
               alt="Before Image"
-              style="width:100px;"
+              style="width:100px; cursor: pointer;"
+              @click="openImageModal(getImageUrl(manpowerProgress.before_image[0]))"
             />
           </td>
           <td>
             <img
               v-if="manpowerProgress.after_image && manpowerProgress.after_image.length"
-              :src="manpowerProgress.after_image[0].url"
+              :src="getImageUrl(manpowerProgress.after_image[0])"
               alt="After Image"
-              style="width:100px;"
+              style="width:100px; cursor: pointer;"
+              @click="openImageModal(getImageUrl(manpowerProgress.after_image[0]))"
             />
           </td>
         </tr>
       </tbody>
     </table>
+
+    <!-- Modal for Enlarged Image -->
+    <div v-if="isImageModalOpen" class="modal-overlay" @click="closeModal">
+      <div class="modal-content" @click.stop>
+        <img :src="selectedImage" alt="Enlarged view" />
+        <button class="close-button" @click="closeModal">Close</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -153,29 +162,26 @@ export default {
     return {
       project: {},
       headerSections: [],
-      manpowerProgress: null // To store manpower progress data
+      manpowerProgress: null,
+      // Modal related data properties
+      isImageModalOpen: false,
+      selectedImage: ''
     };
   },
   mounted() {
-    // const documentId = this.$route.params.documentId;
     // Fetch header sections (and project details) from API
     axios
-      .get(
-        `http://localhost:1337/api/header-per-project-sections?populate=*`
-      )
+      .get(`http://localhost:1337/api/header-per-project-sections?populate=*`)
       .then((response) => {
         if (
           response.data &&
           response.data.data &&
           response.data.data.length > 0
         ) {
-          // Map headers to include a property for problem (if needed)
           this.headerSections = response.data.data.map(header => ({
             ...header,
-            // Use API value directly – note the API returns "problem_encountered"
             problem_encountered: header.problem_encountered
           }));
-          // Set project details using the first header's project data
           if (this.headerSections[0] && this.headerSections[0].project) {
             this.project = this.headerSections[0].project;
           }
@@ -185,7 +191,7 @@ export default {
         console.error("Error fetching project header data:", error);
       });
 
-    // Fetch manpower progress from API
+    // Fetch manpower progress from API.
     axios
       .get(`http://localhost:1337/api/manpower-progresses?populate=*`)
       .then((response) => {
@@ -194,7 +200,6 @@ export default {
           response.data.data &&
           response.data.data.length > 0
         ) {
-          // For simplicity, using the first manpower progress record
           this.manpowerProgress = response.data.data[0];
         }
       })
@@ -203,7 +208,7 @@ export default {
       });
   },
   methods: {
-    // Compute totals for WT% and % PREV columns based on header.items and header.project_item_modifieds
+    // Compute totals for WT% and % PREV columns.
     computeTotals(header) {
       const items = header.items || [];
       const projectItemModifieds = header.project_item_modifieds || [];
@@ -217,7 +222,7 @@ export default {
       );
       return { totalWTPercent, totalPrevWTPercents };
     },
-    // Get the activity for this date by matching project_item_modifieds with items
+    // Get activity for this date by matching project_item_modifieds with items.
     getThisDateActivity(header) {
       if (!header.items || !header.project_item_modifieds) return '';
       const activities = header.project_item_modifieds
@@ -230,6 +235,20 @@ export default {
         })
         .filter(text => text !== '');
       return activities.join(', ');
+    },
+    // Helper method to build the complete image URL.
+    getImageUrl(image) {
+      return image && image.url ? `http://localhost:1337${image.url}` : '';
+    },
+    // Opens the modal with the selected image.
+    openImageModal(url) {
+      this.selectedImage = url;
+      this.isImageModalOpen = true;
+    },
+    // Closes the modal.
+    closeModal() {
+      this.isImageModalOpen = false;
+      this.selectedImage = '';
     }
   }
 };
@@ -283,5 +302,44 @@ export default {
 img {
   border: 1px solid #ccc;
   border-radius: 4px;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  position: relative;
+  /* background: white;
+  padding: 20px; */
+  border-radius: 4px;
+}
+
+.modal-content img {
+  max-width: 100%;
+  max-height: 80vh;
+  display: block;
+  margin: 0 auto;
+}
+
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
 }
 </style>
