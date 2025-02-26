@@ -1,7 +1,7 @@
 <template>
   <div>
     <button @click="redirectToViewWeeklyProgressReport" class="redirect-btn">
-      View Weekly Progress Report
+      View Detailed Weekly Progress Report
     </button>
     <table border="1" class="mx-auto mt-5">
       <thead>
@@ -37,6 +37,28 @@
               {{ section.letter_label_for_item_no }}
             </td>
           </tr>
+          <!-- Display the header for the section -->
+          <tr :key="'header-' + section.id">
+            <td colspan="14" class="font-weight-bold">
+              {{ section.header_per_project_section }}
+            </td>
+          </tr>
+          <!-- Display the progress bar for the section using sum_wt_percent -->
+          <tr :key="'progress-' + section.id">
+            <td colspan="14">
+              <v-progress-linear
+                :value="getSumWtPercent(section)"
+                :max="getSectionTotalWt(section)"
+                :color="getProgressColor(getSumWtPercent(section))"
+                height="20"
+                striped
+              >
+                <template v-slot:default>
+                  <strong>{{ getSumWtPercent(section) }}/{{ getSectionTotalWt(section) }}</strong>
+                </template>
+              </v-progress-linear>
+            </td>
+          </tr>
           <tr :key="'desc-' + section.id">
             <td colspan="14" class="font-italic">
               {{ section.mainDescription }}
@@ -58,7 +80,7 @@
             <td>{{ formatDecimal(getModifiedQuantity(section.id, item.itemno)) }}</td>
             <!-- TOTAL AMOUNT computed as P_EnteredQuantity * unitCost -->
             <td>{{ formatDecimal(getTotalAmount(section.id, item.itemno)) }}</td>
-            <!-- BALANCE displays the updated "amount" from project_item_modifieds (after subtraction) -->
+            <!-- BALANCE displays the updated "amount" from project_item_modifieds -->
             <td>{{ formatDecimal(getModifiedAmount(section.id, item.itemno)) }}</td>
             <!-- PREV PERCENTAGE displays the value of P_EnteredQuantity -->
             <td>{{ formatDecimal(getPreviousPercentage(section.id, item.itemno)) }}</td>
@@ -66,7 +88,6 @@
           </tr>
         </template>
       </tbody>
-
       <!-- TOTAL Row -->
       <tfoot>
         <tr class="font-weight-bold bg-light">
@@ -83,9 +104,6 @@
         </tr>
       </tfoot>
     </table>
-    <!-- <button @click="refreshWorkspace" class="refresh-btn">Refresh Workspace</button>
-    <button @click="redirectToWeeklyProgressReport" class="redirect-btn">View Weekly Progress Report</button> -->
-    <!-- <button @click="redirectToViewWeeklyProgressReport" class="redirect-btn">View Weekly Progress Report</button> -->
   </div>
 </template>
 
@@ -117,7 +135,6 @@ export default {
       }, 0);
     },
     totalTotalAmount() {
-      // Sums the computed TOTAL AMOUNT from each modified item (for each item in a section)
       return this.sections.reduce((sum, section) => {
         return sum + section.items.reduce((acc, item) => {
           return acc + parseFloat(this.getTotalAmount(section.id, item.itemno));
@@ -144,7 +161,6 @@ export default {
         console.error('Error fetching data:', error);
       }
     },
-    // Fetch modified items using the endpoint with ?populate=*
     async fetchProjectItemModifieds() {
       try {
         const response = await axios.get("http://localhost:1337/api/project-item-modifieds?populate=*");
@@ -155,7 +171,6 @@ export default {
         console.error('Error fetching project item modifieds:', error);
       }
     },
-    // Retrieves the previous quantity from the modified record (P_EnteredQuantity)
     getPreviousQty(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
       if (!section || !section.project_item_modifieds) return 0;
@@ -164,7 +179,6 @@ export default {
       );
       return modifiedItem ? parseFloat(modifiedItem.P_EnteredQuantity) || 0 : 0;
     },
-    // Retrieves the "quantity" from the modified items
     getModifiedQuantity(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
       if (!section || !section.project_item_modifieds) return 0;
@@ -173,7 +187,6 @@ export default {
       );
       return modifiedItem ? parseFloat(modifiedItem.quantity) || 0 : 0;
     },
-    // Retrieves the "amount" from the modified items (BALANCE column)
     getModifiedAmount(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
       if (!section || !section.project_item_modifieds) return 0;
@@ -182,7 +195,6 @@ export default {
       );
       return modifiedItem ? parseFloat(modifiedItem.amount) || 0 : 0;
     },
-    // Calculates previous amount using P_EnteredQuantity multiplied by the unit cost
     calculatePreviousAmount(sectionId, item) {
       const previousQty = this.getPreviousQty(sectionId, item.itemno);
       const unitCost = parseFloat(item.unitCost) || 0;
@@ -196,7 +208,6 @@ export default {
       );
       return modifiedItem ? parseFloat(modifiedItem.P_EnteredQuantity) || 0 : 0;
     },
-    // Retrieves the computed TOTAL AMOUNT from the modified record.
     getTotalAmount(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
       if (!section || !section.project_item_modifieds) return 0;
@@ -205,29 +216,20 @@ export default {
       );
       return modifiedItem ? parseFloat(modifiedItem.totalAmount) || 0 : 0;
     },
-    // Update each project-item-modified record:
-    // 1. Compute totalAmount = P_EnteredQuantity * unitCost.
-    // 2. Subtract totalAmount from the current amount.
-    // 3. Update both fields in the backend.
     updateProjectItemModifiedAmounts() {
       this.sections.forEach(section => {
-        // Associate modified records with the section using header_per_project_section.id
         section.project_item_modifieds = this.projectItemModifieds.filter(mod => {
           return mod.header_per_project_section && mod.header_per_project_section.id === section.id;
         });
-        // For every item in the section, update the modified record’s totalAmount and adjusted amount.
         section.items.forEach(item => {
           const modItem = section.project_item_modifieds.find(mod => mod.itemno === item.itemno);
           if (modItem) {
-            // Compute totalAmount from P_EnteredQuantity * unitCost
             const computedTotalAmount =
               parseFloat(modItem.P_EnteredQuantity || 0) * parseFloat(item.unitCost || 0);
             modItem.totalAmount = computedTotalAmount;
-            // Subtract the computed totalAmount from the original amount
             const originalAmount = parseFloat(modItem.amount) || 0;
             const newModifiedAmount = originalAmount - computedTotalAmount;
             modItem.amount = newModifiedAmount;
-            // Update the record on the backend with both updated fields.
             axios
               .put(`http://localhost:1337/api/project-item-modifieds/${modItem.documentId}`, {
                 data: {
@@ -260,11 +262,37 @@ export default {
     redirectToViewWeeklyProgressReport() {
       const documentId = this.$route.params.documentId;
       this.$router.push({ name: 'ViewWeeklyProgressReport', params: { documentId } });
+    },
+    // UPDATED: Calculate the sum of sum_wt_percent values from project_item_modifieds for the section
+    getSumWtPercent(section) {
+      if (section.project_item_modifieds && section.project_item_modifieds.length > 0) {
+        return section.project_item_modifieds.reduce((sum, modItem) => {
+          return sum + (parseFloat(modItem.sum_wt_percent) || 0);
+        }, 0);
+      }
+      return 0;
+    },
+    // NEW: Calculate the total wt_percent from the original contract items for the section
+    getSectionTotalWt(section) {
+      if (section.items && section.items.length > 0) {
+        return section.items.reduce((sum, item) => {
+          return sum + (parseFloat(item.wt_percent) || 0);
+        }, 0);
+      }
+      return 0;
+    },
+    // NEW: Determine progress bar color based on progress value
+    getProgressColor(progress) {
+      if (progress < 30) return 'red';
+      if (progress < 70) return 'orange';
+      return 'green';
     }
   },
   mounted() {
-    // Fetch sections and modified items—but do not auto-update amounts.
     Promise.all([this.fetchData(), this.fetchProjectItemModifieds()])
+      .then(() => {
+        this.updateProjectItemModifiedAmounts();
+      })
       .catch(error => {
         console.error('Error in mounted hook:', error);
       });
@@ -279,18 +307,15 @@ td {
   text-align: center;
   font-size: 15px;
 }
-
 th {
   background-color: #f4f4f4;
 }
-
 table {
   background-color: #f4f4f4;
   max-width: 90%;
   margin: auto;
   border-collapse: collapse;
 }
-
 .table-header {
   background-color: rgb(239, 213, 40);
   font-size: 20px;
@@ -298,20 +323,16 @@ table {
   text-align: center;
   padding: 10px;
 }
-
 .font-weight-bold {
   font-weight: bold;
   background-color: #e0e0e0;
 }
-
 .font-italic {
   font-style: italic;
 }
-
 .bg-light {
   background-color: #f8f9fa;
 }
-
 .redirect-btn {
   background: #0a50e8;
   margin-left: 63px;

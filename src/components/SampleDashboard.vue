@@ -1,5 +1,6 @@
 <template>
   <v-container fluid class="pa-0">
+    <!-- Search Field -->
     <v-row class="ma-0">
       <v-col cols="12" class="pa-2">
         <v-text-field
@@ -14,6 +15,8 @@
         ></v-text-field>
       </v-col>
     </v-row>
+
+    <!-- Projects Cards -->
     <v-row class="ma-0">
       <v-col
         v-for="project in filteredProjects"
@@ -66,7 +69,7 @@
             </v-progress-linear>
           </v-card-text>
           <v-card-actions>
-            <!-- View Details Button (kept) -->
+            <!-- View Details Button -->
             <router-link :to="`/project-details/${project.documentId}`" class="icon-button">
               <v-btn color="primary" text small>View Details</v-btn>
             </router-link>
@@ -86,10 +89,49 @@
                 <v-icon>mdi-calendar-clock</v-icon>
               </v-btn>
             </router-link>
+
+            <!-- Delete Icon -->
+            <v-btn icon small color="red" @click.stop="deleteProject(project)">
+              <v-icon>mdi-delete</v-icon>
+            </v-btn>
           </v-card-actions>
         </v-card>
       </v-col>
     </v-row>
+
+    <!-- Floating Action Button to open the wt_percent dialog -->
+    <v-btn
+      fab
+      dark
+      color="teal"
+      class="floating-btn"
+      @click="dialog = true"
+    >
+      <v-icon>mdi-chart-donut</v-icon>
+    </v-btn>
+
+    <!-- Dialog displaying the average wt_percent -->
+    <v-dialog v-model="dialog" max-width="400">
+      <v-card>
+        <v-card-title class="headline">Average WT Percentage</v-card-title>
+        <v-card-text class="text-center">
+          <v-progress-circular
+            :value="averageWtPercent"
+            :rotate="360"
+            :size="120"
+            :width="15"
+            :color="circularColor"
+          >
+            <span>{{ averageWtPercent }}%</span>
+          </v-progress-circular>
+          <p class="mt-4">Total wt_percent divided by the number of projects</p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn text color="primary" @click="dialog = false">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -100,9 +142,11 @@ export default {
   name: 'SampleDashboard',
   data() {
     return {
-      // Set initial search value from localStorage, if available
       search: localStorage.getItem('searchText') || '',
-      projects: []
+      projects: [],
+      dialog: false,
+      totalWtPercentSum: 0, // Sum of wt_percent values
+      projectsCount: 0      // Number of projects from the projects API
     };
   },
   computed: {
@@ -113,10 +157,17 @@ export default {
         project.projectLocation.toLowerCase().includes(searchLower) ||
         (project.sourceOfFund && project.sourceOfFund.toLowerCase().includes(searchLower))
       );
+    },
+    // Calculate average wt_percent by dividing total sum by number of projects
+    averageWtPercent() {
+      return this.projectsCount ? Math.round(this.totalWtPercentSum / this.projectsCount) : 0;
+    },
+    // Update the circular progress color based on the average wt_percent
+    circularColor() {
+      return this.getProgressColor(this.averageWtPercent);
     }
   },
   watch: {
-    // Watch for changes in search and save to localStorage
     search(newVal) {
       localStorage.setItem('searchText', newVal);
     }
@@ -136,6 +187,7 @@ export default {
           const projectName = projectData.projectName;
           if (!projectsMap.has(projectName)) {
             projectsMap.set(projectName, {
+              id: projectData.id, // Added project id for deletion
               documentId: projectData.documentId,
               projectName: projectName,
               projectLocation: projectData.projectLocation || "Unknown",
@@ -144,18 +196,52 @@ export default {
               sourceOfFund: projectData.sourceOfFund || '',
               totalProjectAmount: projectData.totalProjectAmount || 0,
               projectDuration: projectData.projectDuration || 0,
-              progress: 0,
-              showMore: false
+              progress: 0
             });
           }
 
-          let totalWtPercent = section.project_item_modifieds?.reduce((sum, item) => sum + (item.wt_percent ?? 0), 0) || 0;
-          projectsMap.get(projectName).progress += totalWtPercent;
+          let totalWtPercentProject = section.project_item_modifieds?.reduce((sum, item) => sum + (item.wt_percent ?? 0), 0) || 0;
+          projectsMap.get(projectName).progress += totalWtPercentProject;
         });
 
         this.projects = Array.from(projectsMap.values());
       } catch (error) {
         console.error("Error fetching projects:", error);
+      }
+    },
+    async fetchProjectItems() {
+      try {
+        const response = await axios.get('http://localhost:1337/api/project-item-modifieds?populate=*');
+        const items = response.data.data;
+        // Sum up the wt_percent values from the API response
+        this.totalWtPercentSum = items.reduce((sum, item) => sum + (item.wt_percent || 0), 0);
+      } catch (error) {
+        console.error("Error fetching project item modifieds:", error);
+      }
+    },
+    async fetchProjectsCount() {
+      try {
+        const response = await axios.get('http://localhost:1337/api/projects?populate=*');
+        const projectsData = response.data.data;
+        this.projectsCount = projectsData.length;
+      } catch (error) {
+        console.error("Error fetching projects count:", error);
+      }
+    },
+    async deleteProject(project) {
+      if (!window.confirm(`Are you sure you want to delete project "${project.projectName}"? This action cannot be undone.`)) {
+        return;
+      }
+      try {
+        await axios.delete(`http://localhost:1337/api/projects/${project.documentId}`);
+        alert('Project deleted successfully.');
+        // Refresh data after deletion
+        this.fetchProjects();
+        this.fetchProjectItems();
+        this.fetchProjectsCount();
+      } catch (error) {
+        console.error("Error deleting project:", error);
+        alert('There was an error deleting the project.');
       }
     },
     formatDate(dateString) {
@@ -171,6 +257,8 @@ export default {
   },
   mounted() {
     this.fetchProjects();
+    this.fetchProjectItems();
+    this.fetchProjectsCount();
   }
 };
 </script>
@@ -202,5 +290,13 @@ export default {
 }
 .icon-button {
   text-decoration: none;
+}
+
+/* Floating Action Button styling */
+.floating-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
 }
 </style>
