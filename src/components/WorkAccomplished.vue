@@ -1,7 +1,9 @@
 <template>
   <div>
     <div class="ps-15 mt-5 notification" @click="redirectToWeeklyProgressReport">
-      <p class="text-center">Please CLICK here go to the Weekly Progress Report page BEFORE SUBMITTING data.(ONLY ONCE)</p>
+      <p class="text-center">
+        Please CLICK here go to the Weekly Progress Report page BEFORE SUBMITTING data.(ONLY ONCE)
+      </p>
     </div>
     <table border="1" class="mx-auto ">
       <thead>
@@ -243,9 +245,6 @@ export default {
       );
       return { totalWTPercent, totalPrevWTPercents };
     },
-
-    
-
     // Update the header's remaining value for all sections after submission
     async updateRemainingForAllSections() {
       for (const section of this.sections) {
@@ -314,6 +313,9 @@ export default {
                 const newRemaining = originalQty - newDelivered;
                 const previousWt = parseFloat(modRecord.wt_percent) || 0;
                 const newWt = previousWt + inputWt;
+                // New feature: add inputWt to the previous sum_wt_percent from the database
+                const previousSumWtPercent = parseFloat(modRecord.sum_wt_percent) || 0;
+                const newSumWtPercent = previousSumWtPercent + inputWt;
                 const existingRecordId = modRecord.documentId;
                 await axios.put(
                   `http://localhost:1337/api/project-item-modifieds/${existingRecordId}`,
@@ -325,6 +327,7 @@ export default {
                       quantity: newRemaining,
                       p_wt_percent: inputWt,
                       P_EnteredQuantity: inputQty,
+                      sum_wt_percent: newSumWtPercent
                     }
                   }
                 );
@@ -343,6 +346,7 @@ export default {
                       quantity: newRemaining,
                       p_wt_percent: inputWt,
                       P_EnteredQuantity: inputQty,
+                      sum_wt_percent: inputWt
                     }
                   }
                 );

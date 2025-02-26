@@ -147,7 +147,7 @@
     <div v-if="isImageModalOpen" class="modal-overlay" @click="closeModal">
       <div class="modal-content" @click.stop>
         <img :src="selectedImage" alt="Enlarged view" />
-        <button class="close-button" @click="closeModal">Close</button>
+        <!-- <button class="close-button" @click="closeModal">Close</button> -->
       </div>
     </div>
   </div>
