@@ -3,6 +3,7 @@
     <button @click="redirectToViewWeeklyProgressReport" class="redirect-btn">
       View Detailed Weekly Progress Report
     </button>
+    <button class="red-btn" onclick="window.print()">Print this page</button>
     <table border="1" class="mx-auto mt-5">
       <thead>
         <tr>
@@ -336,6 +337,15 @@ table {
 .redirect-btn {
   background: #0a50e8;
   margin-left: 63px;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 5px;
+  color: white;
+}
+
+.red-btn {
+  background: #ff0000;
+  margin-left: 10px;
   margin-top: 10px;
   padding: 10px;
   border-radius: 5px;

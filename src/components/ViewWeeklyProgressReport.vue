@@ -1,5 +1,6 @@
 <template>
   <div>
+    <button class="red-btn" onclick="window.print()">Print this page</button>
     <table class="progress-table mx-auto my-5">
       <!-- Project Header Section -->
       <thead>
@@ -341,5 +342,13 @@ img {
   border: none;
   padding: 5px 10px;
   cursor: pointer;
+}
+.red-btn {
+  background: #ff0000;
+  margin-left: 65px;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 5px;
+  color: white;
 }
 </style>

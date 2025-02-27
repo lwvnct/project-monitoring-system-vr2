@@ -381,7 +381,7 @@ export default {
         })
         .then(response => {
           console.log('Before image uploaded:', response.data);
-          alert('Before image uploaded successfully!');
+          // alert('Before image uploaded successfully!');
           // Save the returned file data (an array) for later use in the payload.
           this.beforeUploadedFiles = response.data;
         })
@@ -410,7 +410,7 @@ export default {
         })
         .then(response => {
           console.log('After image uploaded:', response.data);
-          alert('After image uploaded successfully!');
+          // alert('After image uploaded successfully!');
           // Save the returned file data for later use in the payload.
           this.afterUploadedFiles = response.data;
         })
