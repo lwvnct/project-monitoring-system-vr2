@@ -94,7 +94,8 @@ export default {
   data() {
     return {
       sections: [],
-      projectItemModifieds: []
+      projectItemModifieds: [],
+      isSubmitting: false // New state to track submission status
     };
   },
   methods: {
@@ -293,6 +294,8 @@ export default {
       this.$router.push({ name: 'WeeklyProgressReport' });
     },
     async submitData() {
+      if (this.isSubmitting) return; // Prevent multiple submissions
+      this.isSubmitting = true; // Set submitting state to true
       try {
         // Loop through each section and its items to update modifications
         for (const section of this.sections) {
@@ -361,6 +364,8 @@ export default {
         alert('Data successfully updated!');
       } catch (error) {
         console.error('Error submitting data:', error);
+      } finally {
+        this.isSubmitting = false; // Reset submitting state
       }
     }
   },

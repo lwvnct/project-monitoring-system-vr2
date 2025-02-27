@@ -26,14 +26,14 @@
           <v-icon left>mdi-folder-multiple</v-icon>
           Create Projects
         </v-btn>
-        <v-btn text class="button-style" to="/reports">
+        <!-- <v-btn text class="button-style" to="/reports">
           <v-icon left>mdi-file-chart</v-icon>
           Reports
-        </v-btn>
+        </v-btn> -->
       </div>
 
       <!-- User Menu -->
-      <v-menu offset-y>
+      <!-- <v-menu offset-y>
         <template v-slot:activator="{ on, attrs }">
           <v-btn icon v-bind="attrs" v-on="on">
             <v-avatar color="grey lighten-2" size="32">
@@ -72,7 +72,7 @@
             <v-list-item-title>Logout</v-list-item-title>
           </v-list-item>
         </v-list>
-      </v-menu>
+      </v-menu> -->
 
       <!-- Mobile Menu Button -->
       <v-app-bar-nav-icon class="d-md-none" @click="drawer = !drawer"></v-app-bar-nav-icon>
@@ -94,12 +94,12 @@
             </v-list-item-icon>
             <v-list-item-title>Create Projects</v-list-item-title>
           </v-list-item>
-          <v-list-item to="/reports">
+          <!-- <v-list-item to="/reports">
             <v-list-item-icon>
               <v-icon>mdi-file-chart</v-icon>
             </v-list-item-icon>
             <v-list-item-title>Reports</v-list-item-title>
-          </v-list-item>
+          </v-list-item> -->
         </v-list-item-group>
       </v-list>
     </v-navigation-drawer>
@@ -127,13 +127,13 @@ export default {
       selectedItem: 0,
     };
   },
-  methods: {
-    logout() {
-      // Add your logout logic here
-      this.$store.dispatch('auth/logout');
-      this.$router.push('/login');
-    },
-  },
+  // methods: {
+  //   logout() {
+  //     // Add your logout logic here
+  //     this.$store.dispatch('auth/logout');
+  //     this.$router.push('/login');
+  //   },
+  // },
 };
 </script>
 

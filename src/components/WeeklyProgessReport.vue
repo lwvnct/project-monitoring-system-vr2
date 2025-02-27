@@ -46,7 +46,7 @@
           </th>
         </tr>
         <!-- Wrap the date inputs in a flex container -->
-        <tr>
+        <!-- <tr>
           <th colspan="13" class="smalltext">
             As of:
             <span class="date-inputs">
@@ -55,7 +55,7 @@
               <input type="date" v-model="asOf" placeholder="Enter as of date" />
             </span>
           </th>
-        </tr>
+        </tr> -->
         <tr>
           <th colspan="13" class="table-title">MATERIAL PROGRESS</th>
         </tr>
@@ -230,7 +230,9 @@ export default {
       afterUploadedFiles: [],
       // File name to display in the text field
       beforeFileName: '',
-      afterFileName: ''
+      afterFileName: '',
+      isSubmittingProblemUpdates: false, // New state to track problem updates submission status
+      isSubmittingManpowerProgress: false // New state to track manpower progress submission status
     };
   },
   mounted() {
@@ -338,28 +340,36 @@ export default {
       });
     },
     // Submit updates for all problemEncountered fields for each headerSection.
-    submitAllProblemUpdates() {
-      const updatePromises = this.headerSections.map(header => {
-        return axios
-          .put(`http://localhost:1337/api/header-per-project-sections/${header.documentId}`, {
-            data: { problem_encountered: header.problemEncountered }
-          })
-          .then(() => {
-            console.log(`Updated problem encountered for header ${header.documentId}`);
-          })
-          .catch(error => {
-            console.error(`Error updating problem encountered for header ${header.documentId}:`, error);
-            return Promise.reject(error);
-          });
-      });
-  
-      Promise.all(updatePromises)
-        .then(() => {
-          alert("All problem encountered fields updated successfully.");
-        })
-        .catch(() => {
-          alert("An error occurred while updating one or more problem encountered fields.");
+    async submitAllProblemUpdates() {
+      if (this.isSubmittingProblemUpdates) return; // Prevent multiple submissions
+      this.isSubmittingProblemUpdates = true; // Set submitting state to true
+      try {
+        const updatePromises = this.headerSections.map(header => {
+          return axios
+            .put(`http://localhost:1337/api/header-per-project-sections/${header.documentId}`, {
+              data: { problem_encountered: header.problemEncountered }
+            })
+            .then(() => {
+              console.log(`Updated problem encountered for header ${header.documentId}`);
+            })
+            .catch(error => {
+              console.error(`Error updating problem encountered for header ${header.documentId}:`, error);
+              return Promise.reject(error);
+            });
         });
+    
+        Promise.all(updatePromises)
+          .then(() => {
+            alert("All problem encountered fields updated successfully.");
+          })
+          .catch(() => {
+            alert("An error occurred while updating one or more problem encountered fields.");
+          });
+      } catch (error) {
+        console.error("Error submitting problem updates:", error);
+      } finally {
+        this.isSubmittingProblemUpdates = false; // Reset submitting state
+      }
     },
     // Methods for the custom "Before" file input:
     triggerBeforeFileInput() {
@@ -420,43 +430,51 @@ export default {
         });
     },
     // Submit manpower progress to the API with relation to the project and include uploaded images.
-    submitManpowerProgress() {
-      const payload = {
-        data: {
-          manpower_designation: this.manpowerDesignation,
-          no_of_manpower: this.noOfManpower,
-          name_of_personel: this.nameOfPersonel,
-          work_done: this.workDoneOrInProgress,
-          project: this.project.id,
-          before_image: this.beforeUploadedFiles.length
-            ? this.beforeUploadedFiles.map(file => file.id)
-            : [],
-          after_image: this.afterUploadedFiles.length
-            ? this.afterUploadedFiles.map(file => file.id)
-            : []
-        }
-      };
-      console.log('Payload for manpower progress:', payload);
-      
-      axios
-        .post('http://localhost:1337/api/manpower-progresses', payload)
-        .then((response) => {
-          console.log('Manpower progress added successfully:', response.data);
-          alert("Manpower progress submitted successfully!");
-          // Reset input fields and uploaded file data
-          this.manpowerDesignation = '';
-          this.noOfManpower = '';
-          this.nameOfPersonel = '';
-          this.workDoneOrInProgress = '';
-          this.beforeUploadedFiles = [];
-          this.afterUploadedFiles = [];
-          this.beforeFileName = '';
-          this.afterFileName = '';
-        })
-        .catch((error) => {
-          console.error('Error adding manpower progress:', error);
-          alert("Error submitting manpower progress. Please try again.");
-        });
+    async submitManpowerProgress() {
+      if (this.isSubmittingManpowerProgress) return; // Prevent multiple submissions
+      this.isSubmittingManpowerProgress = true; // Set submitting state to true
+      try {
+        const payload = {
+          data: {
+            manpower_designation: this.manpowerDesignation,
+            no_of_manpower: this.noOfManpower,
+            name_of_personel: this.nameOfPersonel,
+            work_done: this.workDoneOrInProgress,
+            project: this.project.id,
+            before_image: this.beforeUploadedFiles.length
+              ? this.beforeUploadedFiles.map(file => file.id)
+              : [],
+            after_image: this.afterUploadedFiles.length
+              ? this.afterUploadedFiles.map(file => file.id)
+              : []
+          }
+        };
+        console.log('Payload for manpower progress:', payload);
+        
+        axios
+          .post('http://localhost:1337/api/manpower-progresses', payload)
+          .then((response) => {
+            console.log('Manpower progress added successfully:', response.data);
+            alert("Manpower progress submitted successfully!");
+            // Reset input fields and uploaded file data
+            this.manpowerDesignation = '';
+            this.noOfManpower = '';
+            this.nameOfPersonel = '';
+            this.workDoneOrInProgress = '';
+            this.beforeUploadedFiles = [];
+            this.afterUploadedFiles = [];
+            this.beforeFileName = '';
+            this.afterFileName = '';
+          })
+          .catch((error) => {
+            console.error('Error adding manpower progress:', error);
+            alert("Error submitting manpower progress. Please try again.");
+          });
+      } catch (error) {
+        console.error("Error submitting manpower progress:", error);
+      } finally {
+        this.isSubmittingManpowerProgress = false; // Reset submitting state
+      }
     }
   }
 };
@@ -539,15 +557,15 @@ input[type="date"] {
 button {
   padding: 10px 20px;
   font-size: 1rem;
-  background-color: #007bff;
+  background-color: #066913;
   border: none;
   color: white;
   border-radius: 4px;
   cursor: pointer;
-  margin: 0 5px;
+  margin: 0 20px;
 }
 
 button:hover {
-  background-color: #0056b3;
+  background-color: #065d12;
 }
 </style>

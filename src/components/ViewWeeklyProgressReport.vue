@@ -1,6 +1,9 @@
 <template>
   <div>
-    <button class="red-btn" onclick="window.print()">Print this page</button>
+    <!-- Download as PDF Button -->
+    <button @click="downloadPDF" class="download-btn">
+      Download as PDF
+    </button>
     <table class="progress-table mx-auto my-5">
       <!-- Project Header Section -->
       <thead>
@@ -72,31 +75,50 @@
         <tr v-for="header in headerSections" :key="header.id">
           <td></td>
           <td class="notBold">
-            {{ header.mainDescription || 'Loading...' }}
+        {{ header.mainDescription || 'Loading...' }}
           </td>
           <td></td>
           <td class="wt-percent">
-            {{
-              computeTotals(header).totalWTPercent !== null
-                ? computeTotals(header).totalWTPercent
-                : 'N/A'
-            }}%
+        {{
+          computeTotals(header).totalWTPercent !== null
+            ? computeTotals(header).totalWTPercent
+            : 'N/A'
+        }}%
           </td>
           <td class="notBold">{{ getThisDateActivity(header) }}</td>
           <td></td>
           <td class="prev-wt-percent">
-            {{
-              computeTotals(header).totalPrevWTPercents !== null
-                ? computeTotals(header).totalPrevWTPercents
-                : 'N/A'
-            }}%
+        {{
+          computeTotals(header).totalPrevWTPercents !== null
+            ? computeTotals(header).totalPrevWTPercents
+            : 'N/A'
+        }}%
           </td>
           <td class="remaining-percent">
-            {{ header.remaining || 'Loading...' }}
+        {{ header.remaining || '--' }}
           </td>
           <td class="problem-cell">
-            {{ header.problem_encountered || 'No Problem Encountered' }}
+        {{ header.problem_encountered || 'No Problem Encountered' }}
           </td>
+        </tr>
+        <tr>
+          <td colspan="3" class="table-title">Total</td>
+          <td class="wt-percent">
+        {{
+          headerSections.reduce((acc, header) => acc + computeTotals(header).totalWTPercent, 0)
+        }}%
+          </td>
+          <td></td>
+          <td></td>
+          <td class="prev-wt-percent">
+        {{
+          headerSections.reduce((acc, header) => acc + computeTotals(header).totalPrevWTPercents, 0)
+        }}%
+          </td>
+          <td class="remaining-percent">
+        {{ totalRemainingPercent }}
+          </td>
+          <td></td>
         </tr>
       </tbody>
 
@@ -116,28 +138,28 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-if="manpowerProgress">
+        <tr v-for="progress in manpowerProgresses" :key="progress.id">
           <td></td>
-          <td>{{ manpowerProgress.manpower_designation }}</td>
-          <td>{{ manpowerProgress.no_of_manpower }}</td>
-          <td>{{ manpowerProgress.name_of_personel }}</td>
-          <td colspan="3">{{ manpowerProgress.work_done }}</td>
+          <td>{{ progress.manpower_designation }}</td>
+          <td>{{ progress.no_of_manpower }}</td>
+          <td>{{ progress.name_of_personel }}</td>
+          <td colspan="3">{{ progress.work_done }}</td>
           <td>
             <img
-              v-if="manpowerProgress.before_image && manpowerProgress.before_image.length"
-              :src="getImageUrl(manpowerProgress.before_image[0])"
+              v-if="progress.before_image && progress.before_image.length"
+              :src="getImageUrl(progress.before_image[0])"
               alt="Before Image"
               style="width:100px; cursor: pointer;"
-              @click="openImageModal(getImageUrl(manpowerProgress.before_image[0]))"
+              @click="openImageModal(getImageUrl(progress.before_image[0]))"
             />
           </td>
           <td>
             <img
-              v-if="manpowerProgress.after_image && manpowerProgress.after_image.length"
-              :src="getImageUrl(manpowerProgress.after_image[0])"
+              v-if="progress.after_image && progress.after_image.length"
+              :src="getImageUrl(progress.after_image[0])"
               alt="After Image"
               style="width:100px; cursor: pointer;"
-              @click="openImageModal(getImageUrl(manpowerProgress.after_image[0]))"
+              @click="openImageModal(getImageUrl(progress.after_image[0]))"
             />
           </td>
         </tr>
@@ -148,7 +170,6 @@
     <div v-if="isImageModalOpen" class="modal-overlay" @click="closeModal">
       <div class="modal-content" @click.stop>
         <img :src="selectedImage" alt="Enlarged view" />
-        <!-- <button class="close-button" @click="closeModal">Close</button> -->
       </div>
     </div>
   </div>
@@ -156,6 +177,8 @@
 
 <script>
 import axios from 'axios';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export default {
   name: "ViewWeeklyProgressReport",
@@ -163,7 +186,7 @@ export default {
     return {
       project: {},
       headerSections: [],
-      manpowerProgress: null,
+      manpowerProgresses: [],
       // Modal related data properties
       isImageModalOpen: false,
       selectedImage: ''
@@ -192,7 +215,7 @@ export default {
         console.error("Error fetching project header data:", error);
       });
 
-    // Fetch manpower progress from API.
+    // Fetch manpower progress records related to the project
     axios
       .get(`http://localhost:1337/api/manpower-progresses?populate=*`)
       .then((response) => {
@@ -201,15 +224,19 @@ export default {
           response.data.data &&
           response.data.data.length > 0
         ) {
-          this.manpowerProgress = response.data.data[0];
+          this.manpowerProgresses = response.data.data;
         }
       })
       .catch((error) => {
         console.error("Error fetching manpower progress data:", error);
       });
   },
+  computed: {
+    totalRemainingPercent() {
+      return this.headerSections.reduce((acc, header) => acc + (header.remaining || 0), 0);
+    }
+  },
   methods: {
-    // Compute totals for WT% and % PREV columns.
     computeTotals(header) {
       const items = header.items || [];
       const projectItemModifieds = header.project_item_modifieds || [];
@@ -223,7 +250,6 @@ export default {
       );
       return { totalWTPercent, totalPrevWTPercents };
     },
-    // Get activity for this date by matching project_item_modifieds with items.
     getThisDateActivity(header) {
       if (!header.items || !header.project_item_modifieds) return '';
       const activities = header.project_item_modifieds
@@ -237,19 +263,40 @@ export default {
         .filter(text => text !== '');
       return activities.join(', ');
     },
-    // Helper method to build the complete image URL.
     getImageUrl(image) {
       return image && image.url ? `http://localhost:1337${image.url}` : '';
     },
-    // Opens the modal with the selected image.
     openImageModal(url) {
       this.selectedImage = url;
       this.isImageModalOpen = true;
     },
-    // Closes the modal.
     closeModal() {
       this.isImageModalOpen = false;
       this.selectedImage = '';
+    },
+    // New method: capture the table, reserve header space at the top for the timestamp, and generate a PDF.
+    downloadPDF() {
+      const margin = 20; // margin in points
+      const headerMargin = 30; // space reserved at the top for the timestamp
+      // Select the element containing the table using its class
+      const tableElement = this.$el.querySelector('.progress-table');
+      html2canvas(tableElement, { useCORS: true }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'pt', 'a4');
+        // Calculate available width after margins
+        const pdfWidth = pdf.internal.pageSize.getWidth() - 2 * margin;
+        // Maintain the aspect ratio of the canvas image
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        // Get current date/time and format it
+        const now = new Date();
+        const timestamp = now.toLocaleString();
+        pdf.setFontSize(10);
+        // Place the timestamp at the top (in the reserved header space)
+        pdf.text(`Created on: ${timestamp}`, margin, margin + (headerMargin / 2));
+        // Add the table image starting below the header
+        pdf.addImage(imgData, 'PNG', margin, margin + headerMargin, pdfWidth, pdfHeight);
+        pdf.save('weekly-progress-report.pdf');
+      });
     }
   }
 };
@@ -259,7 +306,7 @@ export default {
 .progress-table {
   width: 90%;
   border-collapse: collapse;
-  background-color: #f0f0f0;
+  background-color: #ffffff;
 }
 
 .progress-table th,
@@ -301,8 +348,8 @@ export default {
 }
 
 img {
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  /* border: 1px solid #ccc; */
+  border-radius: 2px;
 }
 
 /* Modal Styles */
@@ -321,8 +368,6 @@ img {
 
 .modal-content {
   position: relative;
-  /* background: white;
-  padding: 20px; */
   border-radius: 4px;
 }
 
@@ -343,9 +388,20 @@ img {
   padding: 5px 10px;
   cursor: pointer;
 }
-.red-btn {
+
+/* .red-btn {
   background: #ff0000;
   margin-left: 65px;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 5px;
+  color: white;
+} */
+
+/* Styling for the Download button */
+.download-btn {
+  background: #ff0000;
+  margin-left: 63px;
   margin-top: 10px;
   padding: 10px;
   border-radius: 5px;

@@ -160,7 +160,7 @@ export default {
     },
     // Calculate average wt_percent by dividing total sum by number of projects
     averageWtPercent() {
-      return this.projectsCount ? Math.round(this.totalWtPercentSum / this.projectsCount) : 0;
+      return this.projectsCount ? (this.totalWtPercentSum / this.projectsCount).toFixed(2) : 0;
     },
     // Update the circular progress color based on the average wt_percent
     circularColor() {

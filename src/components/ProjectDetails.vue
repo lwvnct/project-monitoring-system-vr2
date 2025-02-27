@@ -3,11 +3,25 @@
     <button @click="redirectToViewWeeklyProgressReport" class="redirect-btn">
       View Detailed Weekly Progress Report
     </button>
-    <button class="red-btn" onclick="window.print()">Print this page</button>
-    <table border="1" class="mx-auto mt-5">
+    <!-- <button class="red-btn" onclick="window.print()">Print this page</button> -->
+    <!-- New Download button -->
+    <button @click="downloadPDF" class="download-btn">
+      Download as PDF
+    </button>
+    <table ref="pdfTable" border="1" class="mx-auto mt-5">
       <thead>
         <tr>
           <th colspan="14" class="table-header">Project Details</th>
+        </tr>
+        <!-- New row for displaying project info -->
+        <tr v-if="sections.length && sections[0].project">
+          <td colspan="14" class="project-info">
+            <strong>Project Name:</strong> {{ sections[0].project.projectName }} |
+            <strong>Project Location:</strong> {{ sections[0].project.projectLocation }} |
+            <strong>Project Sourcefund:</strong> {{ sections[0].project.sourceOfFund }}  <br>
+            <strong>Start Date:</strong> {{ sections[0].project.startDate }} |
+            <strong>Due Date:</strong> {{ sections[0].project.dueDate }}
+          </td>
         </tr>
         <tr>
           <th rowspan="2">ITEM NO.</th>
@@ -31,63 +45,62 @@
           <th>TOTAL</th>
         </tr>
       </thead>
-      <tbody>
-        <template v-for="section in sections">
-          <tr :key="'section-' + section.id">
-            <td colspan="14" class="font-weight-bold">
-              {{ section.letter_label_for_item_no }}
-            </td>
-          </tr>
-          <!-- Display the header for the section -->
-          <tr :key="'header-' + section.id">
-            <td colspan="14" class="font-weight-bold">
-              {{ section.header_per_project_section }}
-            </td>
-          </tr>
-          <!-- Display the progress bar for the section using sum_wt_percent -->
-          <tr :key="'progress-' + section.id">
-            <td colspan="14">
-              <v-progress-linear
-                :value="getSumWtPercent(section)"
-                :max="getSectionTotalWt(section)"
-                :color="getProgressColor(getSumWtPercent(section))"
-                height="20"
-                striped
-              >
-                <template v-slot:default>
-                  <strong>{{ getSumWtPercent(section) }}/{{ getSectionTotalWt(section) }}</strong>
-                </template>
-              </v-progress-linear>
-            </td>
-          </tr>
-          <tr :key="'desc-' + section.id">
-            <td colspan="14" class="font-italic">
-              {{ section.mainDescription }}
-            </td>
-          </tr>
-          <tr v-for="item in section.items" :key="'item-' + item.id">
-            <td>{{ item.itemno }}</td>
-            <td>{{ item.subDescription }}</td>
-            <td>{{ formatDecimal(item.quantity) }}</td>
-            <td>{{ item.unit }}</td>
-            <td>{{ formatDecimal(item.unitCost) }}</td>
-            <td>{{ formatDecimal(item.amount) }}</td>
-            <td>{{ formatDecimal(item.wt_percent) }}</td>
-            <!-- Previous QTY from P_EnteredQuantity -->
-            <td>{{ formatDecimal(getPreviousQty(section.id, item.itemno)) }}</td>
-            <!-- Previous AMOUNT as previous qty * unit cost -->
-            <td>{{ formatDecimal(calculatePreviousAmount(section.id, item)) }}</td>
-            <!-- REMAINING QUANTITY from project_item_modifieds -->
-            <td>{{ formatDecimal(getModifiedQuantity(section.id, item.itemno)) }}</td>
-            <!-- TOTAL AMOUNT computed as P_EnteredQuantity * unitCost -->
-            <td>{{ formatDecimal(getTotalAmount(section.id, item.itemno)) }}</td>
-            <!-- BALANCE displays the updated "amount" from project_item_modifieds -->
-            <td>{{ formatDecimal(getModifiedAmount(section.id, item.itemno)) }}</td>
-            <!-- PREV PERCENTAGE displays the value of P_EnteredQuantity -->
-            <td>{{ formatDecimal(getPreviousPercentage(section.id, item.itemno)) }}</td>
-            <td>{{ formatDecimal(getPreviousPercentage(section.id, item.itemno)) }}</td>
-          </tr>
-        </template>
+      <!-- Iterate over sections with a separate tbody per section -->
+      <tbody v-for="section in sections" :key="section.id">
+        <tr>
+          <td colspan="14" class="font-weight-bold">
+            {{ section.letter_label_for_item_no }}
+          </td>
+        </tr>
+        <!-- Display the header for the section -->
+        <tr>
+          <td colspan="14" class="font-weight-bold">
+            {{ section.header_per_project_section }}
+          </td>
+        </tr>
+        <!-- Display the progress bar for the section using sum_wt_percent -->
+        <tr>
+          <td colspan="14">
+            <v-progress-linear
+              :value="getSumWtPercent(section)"
+              :max="getSectionTotalWt(section)"
+              :color="getProgressColor(getSumWtPercent(section))"
+              height="20"
+              striped
+            >
+              <template v-slot:default>
+                <strong>{{ getSumWtPercent(section) }}/{{ getSectionTotalWt(section) }}</strong>
+              </template>
+            </v-progress-linear>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="14" class="font-italic">
+            {{ section.mainDescription }}
+          </td>
+        </tr>
+        <tr v-for="item in section.items" :key="'item-' + item.id">
+          <td>{{ item.itemno }}</td>
+          <td>{{ item.subDescription }}</td>
+          <td>{{ formatDecimal(item.quantity) }}</td>
+          <td>{{ item.unit }}</td>
+          <td>{{ formatDecimal(item.unitCost) }}</td>
+          <td>{{ formatDecimal(item.amount) }}</td>
+          <td>{{ formatDecimal(item.wt_percent) }}</td>
+          <!-- Previous QTY from P_EnteredQuantity -->
+          <td>{{ formatDecimal(getPreviousQty(section.id, item.itemno)) }}</td>
+          <!-- Previous AMOUNT as previous qty * unit cost -->
+          <td>{{ formatDecimal(calculatePreviousAmount(section.id, item)) }}</td>
+          <!-- REMAINING QUANTITY from project_item_modifieds -->
+          <td>{{ formatDecimal(getModifiedQuantity(section.id, item.itemno)) }}</td>
+          <!-- TOTAL AMOUNT computed as P_EnteredQuantity * unitCost -->
+          <td>{{ formatDecimal(getTotalAmount(section.id, item.itemno)) }}</td>
+          <!-- BALANCE displays the updated "amount" from project_item_modifieds -->
+          <td>{{ formatDecimal(getModifiedAmount(section.id, item.itemno)) }}</td>
+          <!-- PREV PERCENTAGE displays the value of P_EnteredQuantity -->
+          <td>{{ formatDecimal(getPreviousPercentage(section.id, item.itemno)) }}</td>
+          <td>{{ formatDecimal(getPreviousPercentage(section.id, item.itemno)) }}</td>
+        </tr>
       </tbody>
       <!-- TOTAL Row -->
       <tfoot>
@@ -110,6 +123,8 @@
 
 <script>
 import axios from 'axios';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export default {
   name: 'ProjectDetails',
@@ -153,7 +168,7 @@ export default {
       const documentId = this.$route.params.documentId;
       try {
         const response = await axios.get(
-          `http://localhost:1337/api/header-per-project-sections?populate=*&filters[project][documentId][$eq]=${documentId}`
+          `http://localhost:1337/api/header-per-project-sections?populate=*&&filters[project][documentId][$eq]=${documentId}`
         );
         if (response.data && response.data.data.length > 0) {
           this.sections = response.data.data;
@@ -264,7 +279,6 @@ export default {
       const documentId = this.$route.params.documentId;
       this.$router.push({ name: 'ViewWeeklyProgressReport', params: { documentId } });
     },
-    // UPDATED: Calculate the sum of sum_wt_percent values from project_item_modifieds for the section
     getSumWtPercent(section) {
       if (section.project_item_modifieds && section.project_item_modifieds.length > 0) {
         return section.project_item_modifieds.reduce((sum, modItem) => {
@@ -273,7 +287,6 @@ export default {
       }
       return 0;
     },
-    // NEW: Calculate the total wt_percent from the original contract items for the section
     getSectionTotalWt(section) {
       if (section.items && section.items.length > 0) {
         return section.items.reduce((sum, item) => {
@@ -282,11 +295,33 @@ export default {
       }
       return 0;
     },
-    // NEW: Determine progress bar color based on progress value
     getProgressColor(progress) {
       if (progress < 30) return 'red';
       if (progress < 70) return 'orange';
       return 'green';
+    },
+    // New method: capture the table, reserve a header space for timestamp, and generate a PDF.
+    downloadPDF() {
+      const margin = 20; // margin in points
+      const headerMargin = 30; // space reserved at the top for the timestamp
+      const tableElement = this.$refs.pdfTable;
+      html2canvas(tableElement, { useCORS: true }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF('p', 'pt', 'a4');
+        // Calculate available width after margins
+        const pdfWidth = pdf.internal.pageSize.getWidth() - 2 * margin;
+        // Maintain the aspect ratio of the canvas image
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        // Get the current date/time and format it
+        const now = new Date();
+        const timestamp = now.toLocaleString();
+        pdf.setFontSize(10);
+        // Place the timestamp in the reserved header area (at top left)
+        pdf.text(`Created on: ${timestamp}`, margin, margin + (headerMargin / 2));
+        // Add the table image starting below the header
+        pdf.addImage(imgData, 'PNG', margin, margin + headerMargin, pdfWidth, pdfHeight);
+        pdf.save('project-details.pdf');
+      });
     }
   },
   mounted() {
@@ -312,7 +347,7 @@ th {
   background-color: #f4f4f4;
 }
 table {
-  background-color: #f4f4f4;
+  background-color: #ffffff;
   max-width: 90%;
   margin: auto;
   border-collapse: collapse;
@@ -323,6 +358,12 @@ table {
   font-weight: bold;
   text-align: center;
   padding: 10px;
+}
+.project-info {
+  /* background-color: #e0e0e0; */
+  font-weight: normal;
+  font-size: 16px;
+  padding: 8px;
 }
 .font-weight-bold {
   font-weight: bold;
@@ -335,15 +376,23 @@ table {
   background-color: #f8f9fa;
 }
 .redirect-btn {
-  background: #0a50e8;
+  background: #012b86;
   margin-left: 63px;
   margin-top: 10px;
   padding: 10px;
   border-radius: 5px;
   color: white;
 }
-
-.red-btn {
+/* .red-btn {
+  background: #810101;
+  margin-left: 10px;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 5px;
+  color: white;
+} */
+/* Styling for the Download button */
+.download-btn {
   background: #ff0000;
   margin-left: 10px;
   margin-top: 10px;
