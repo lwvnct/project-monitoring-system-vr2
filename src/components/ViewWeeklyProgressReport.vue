@@ -9,7 +9,7 @@
       <thead>
         <tr>
           <th colspan="13" class="bgcolor table-title py-3">
-            WEEKLY PROGRESS REPORT
+            PROGRESS REPORT
           </th>
         </tr>
         <tr>
@@ -75,48 +75,48 @@
         <tr v-for="header in headerSections" :key="header.id">
           <td></td>
           <td class="notBold">
-        {{ header.mainDescription || 'Loading...' }}
+            {{ header.mainDescription || 'Loading...' }}
           </td>
           <td></td>
           <td class="wt-percent">
-        {{
-          computeTotals(header).totalWTPercent !== null
-            ? computeTotals(header).totalWTPercent
-            : 'N/A'
-        }}%
+            {{
+              computeTotals(header).totalWTPercent !== null
+                ? computeTotals(header).totalWTPercent
+                : 'N/A'
+            }}%
           </td>
           <td class="notBold">{{ getThisDateActivity(header) }}</td>
           <td></td>
           <td class="prev-wt-percent">
-        {{
-          computeTotals(header).totalPrevWTPercents !== null
-            ? computeTotals(header).totalPrevWTPercents
-            : 'N/A'
-        }}%
+            {{
+              computeTotals(header).totalPrevWTPercents !== null
+                ? computeTotals(header).totalPrevWTPercents
+                : 'N/A'
+            }}%
           </td>
           <td class="remaining-percent">
-        {{ header.remaining || '--' }}
+            {{ header.remaining || '--' }}
           </td>
           <td class="problem-cell">
-        {{ header.problem_encountered || 'No Problem Encountered' }}
+            {{ header.problem_encountered || 'No Problem Encountered' }}
           </td>
         </tr>
         <tr>
           <td colspan="3" class="table-title">Total</td>
           <td class="wt-percent">
-        {{
-          headerSections.reduce((acc, header) => acc + computeTotals(header).totalWTPercent, 0)
-        }}%
+            {{
+              headerSections.reduce((acc, header) => acc + computeTotals(header).totalWTPercent, 0)
+            }}%
           </td>
           <td></td>
           <td></td>
           <td class="prev-wt-percent">
-        {{
-          headerSections.reduce((acc, header) => acc + computeTotals(header).totalPrevWTPercents, 0)
-        }}%
+            {{
+              headerSections.reduce((acc, header) => acc + computeTotals(header).totalPrevWTPercents, 0)
+            }}%
           </td>
           <td class="remaining-percent">
-        {{ totalRemainingPercent }}
+            {{ totalRemainingPercent }}
           </td>
           <td></td>
         </tr>
@@ -125,7 +125,7 @@
       <!-- MAN POWER PROGRESS Section -->
       <thead>
         <tr>
-          <th colspan="13" class="table-title">MAN POWER PROGRESS</th>
+          <th colspan="9" class="table-title">MAN POWER PROGRESS</th>
         </tr>
         <tr>
           <th class="vertical">LABOR(BY ADMINISTRATION)</th>
@@ -143,33 +143,54 @@
           <td>{{ progress.manpower_designation }}</td>
           <td>{{ progress.no_of_manpower }}</td>
           <td>{{ progress.name_of_personel }}</td>
-          <td colspan="3">{{ progress.work_done }}</td>
-          <td>
-            <img
-              v-if="progress.before_image && progress.before_image.length"
-              :src="getImageUrl(progress.before_image[0])"
-              alt="Before Image"
-              style="width:100px; cursor: pointer;"
-              @click="openImageModal(getImageUrl(progress.before_image[0]))"
-            />
+          <td colspan="3">
+            <div>{{ progress.work_done }}</div>
+            <div class="created-at" style="font-size: 0.8rem; color: gray;">
+              Created on: {{ formatDate(progress.createdAt) }}
+            </div>
           </td>
           <td>
-            <img
-              v-if="progress.after_image && progress.after_image.length"
-              :src="getImageUrl(progress.after_image[0])"
-              alt="After Image"
-              style="width:100px; cursor: pointer;"
-              @click="openImageModal(getImageUrl(progress.after_image[0]))"
-            />
+            <div v-if="progress.before_image && progress.before_image.length">
+              <div v-for="(image, index) in (showAllBeforeImages[progress.id] ? progress.before_image : [progress.before_image[0]])" :key="index" class="image-container">
+                <img
+                  :src="getImageUrl(image)"
+                  alt="Before Image"
+                  style="width:100px; cursor: pointer; margin-bottom: 5px;"
+                  @click="openImageGallery(progress.before_image)"
+                />
+              </div>
+              <span v-if="progress.before_image.length > 1" @click="toggleShowAllImages(progress.id, 'before')">
+                {{ showAllBeforeImages[progress.id] ? 'View less' : `+${progress.before_image.length - 1} more` }}
+              </span>
+            </div>
+          </td>
+          <td>
+            <div v-if="progress.after_image && progress.after_image.length">
+              <div v-for="(image, index) in (showAllAfterImages[progress.id] ? progress.after_image : [progress.after_image[0]])" :key="index" class="image-container">
+                <img
+                  :src="getImageUrl(image)"
+                  alt="After Image"
+                  style="width:100px; cursor: pointer; margin-bottom: 5px;"
+                  @click="openImageGallery(progress.after_image)"
+                />
+              </div>
+              <span v-if="progress.after_image.length > 1" @click="toggleShowAllImages(progress.id, 'after')">
+                {{ showAllAfterImages[progress.id] ? 'View less' : `+${progress.after_image.length - 1} more` }}
+              </span>
+            </div>
           </td>
         </tr>
       </tbody>
     </table>
 
-    <!-- Modal for Enlarged Image -->
+    <!-- Modal for Enlarged Image Gallery -->
     <div v-if="isImageModalOpen" class="modal-overlay" @click="closeModal">
       <div class="modal-content" @click.stop>
-        <img :src="selectedImage" alt="Enlarged view" />
+        <div class="image-gallery">
+          <div v-for="(image, index) in selectedImages" :key="index" class="image-item">
+            <img :src="getImageUrl(image)" alt="Enlarged view" />
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -189,7 +210,10 @@ export default {
       manpowerProgresses: [],
       // Modal related data properties
       isImageModalOpen: false,
-      selectedImage: ''
+      selectedImage: '',
+      selectedImages: [],
+      showAllBeforeImages: {},
+      showAllAfterImages: {}
     };
   },
   mounted() {
@@ -270,33 +294,80 @@ export default {
       this.selectedImage = url;
       this.isImageModalOpen = true;
     },
+    openImageGallery(images) {
+      this.selectedImages = images;
+      this.isImageModalOpen = true;
+    },
     closeModal() {
       this.isImageModalOpen = false;
       this.selectedImage = '';
     },
-    // New method: capture the table, reserve header space at the top for the timestamp, and generate a PDF.
+    toggleShowAllImages(progressId, type) {
+      if (type === 'before') {
+        this.$set(this.showAllBeforeImages, progressId, !this.showAllBeforeImages[progressId]);
+      } else if (type === 'after') {
+        this.$set(this.showAllAfterImages, progressId, !this.showAllAfterImages[progressId]);
+      }
+    },
+    // Capture the table, add a small timestamp at the top-left, and generate a one-page PDF
+    // with the table centered in the remaining area.
     downloadPDF() {
-      const margin = 20; // margin in points
-      const headerMargin = 30; // space reserved at the top for the timestamp
-      // Select the element containing the table using its class
-      const tableElement = this.$el.querySelector('.progress-table');
-      html2canvas(tableElement, { useCORS: true }).then(canvas => {
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF('p', 'pt', 'a4');
-        // Calculate available width after margins
-        const pdfWidth = pdf.internal.pageSize.getWidth() - 2 * margin;
-        // Maintain the aspect ratio of the canvas image
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        // Get current date/time and format it
-        const now = new Date();
-        const timestamp = now.toLocaleString();
-        pdf.setFontSize(10);
-        // Place the timestamp at the top (in the reserved header space)
-        pdf.text(`Created on: ${timestamp}`, margin, margin + (headerMargin / 2));
-        // Add the table image starting below the header
-        pdf.addImage(imgData, 'PNG', margin, margin + headerMargin, pdfWidth, pdfHeight);
-        pdf.save('weekly-progress-report.pdf');
+      // Backup current toggle states
+      const backupShowAllBeforeImages = { ...this.showAllBeforeImages };
+      const backupShowAllAfterImages = { ...this.showAllAfterImages };
+
+      // Expand all "more" sections so the full table is visible
+      this.manpowerProgresses.forEach(progress => {
+        this.$set(this.showAllBeforeImages, progress.id, true);
+        this.$set(this.showAllAfterImages, progress.id, true);
       });
+
+      // Wait for DOM updates before capturing the table
+      this.$nextTick(() => {
+        const margin = 20;  // Outer margin for PDF content
+        const timestampFontSize = 8;
+        const timestampHeight = 20; // Reserved height for the timestamp area
+
+        const tableElement = this.$el.querySelector('.progress-table');
+
+        html2canvas(tableElement, { useCORS: true }).then(canvas => {
+          const imgData = canvas.toDataURL('image/png');
+          const pdf = new jsPDF('p', 'pt', 'a4');
+          const pdfPageWidth = pdf.internal.pageSize.getWidth();
+          const pdfPageHeight = pdf.internal.pageSize.getHeight();
+
+          // Draw the timestamp at the most upper-left part with a smaller font
+          const now = new Date();
+          const timestamp = now.toLocaleString();
+          pdf.setFontSize(timestampFontSize);
+          pdf.text(`Created on: ${timestamp}`, 10, 10);
+
+          // Define the available area below the timestamp for the table
+          const availableWidth = pdfPageWidth - 2 * margin;
+          const availableHeight = pdfPageHeight - margin - timestampHeight;
+          const scaleWidth = availableWidth / canvas.width;
+          const scaleHeight = availableHeight / canvas.height;
+          const scale = Math.min(scaleWidth, scaleHeight);
+          const imgWidth = canvas.width * scale;
+          const imgHeight = canvas.height * scale;
+          // Center the table image horizontally and vertically in the available area (below timestamp)
+          const x = (pdfPageWidth - imgWidth) / 2;
+          const y = timestampHeight + ((pdfPageHeight - timestampHeight) - imgHeight) / 2;
+
+          pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+          pdf.save('weekly-progress-report.pdf');
+
+          // Restore original toggle states
+          this.showAllBeforeImages = backupShowAllBeforeImages;
+          this.showAllAfterImages = backupShowAllAfterImages;
+        });
+      });
+    },
+    // Helper method to format ISO date strings
+    formatDate(dateStr) {
+      if (!dateStr) return '';
+      const date = new Date(dateStr);
+      return date.toLocaleString();
     }
   }
 };
@@ -348,8 +419,12 @@ export default {
 }
 
 img {
-  /* border: 1px solid #ccc; */
   border-radius: 2px;
+}
+
+.image-container {
+  display: flex;
+  flex-direction: column;
 }
 
 /* Modal Styles */
@@ -369,13 +444,16 @@ img {
 .modal-content {
   position: relative;
   border-radius: 4px;
+  max-width: 90%;
+  max-height: 90%;
+  overflow: hidden;
 }
 
 .modal-content img {
   max-width: 100%;
   max-height: 80vh;
   display: block;
-  margin: 0 auto;
+  margin: 10px auto;
 }
 
 .close-button {
@@ -389,14 +467,23 @@ img {
   cursor: pointer;
 }
 
-/* .red-btn {
-  background: #ff0000;
-  margin-left: 65px;
-  margin-top: 10px;
-  padding: 10px;
-  border-radius: 5px;
-  color: white;
-} */
+.image-gallery {
+  display: flex;
+  flex-direction: column;
+  overflow-y: scroll;
+  max-height: 80vh;
+}
+
+.image-item {
+  flex: 0 0 auto;
+  margin: 10px;
+}
+
+.image-item img {
+  max-width: 100%;
+  max-height: 80vh;
+  display: block;
+}
 
 /* Styling for the Download button */
 .download-btn {

@@ -158,7 +158,7 @@
               style="width: 100%"
             ></textarea>
           </td>
-          <!-- Custom File Input for Before Image (without Browse button) -->
+          <!-- Custom File Input for Before Images (without Browse button) -->
           <td>
             <div class="custom-file-input">
               <input
@@ -166,17 +166,18 @@
                 ref="beforeFileInput"
                 @change="handleBeforeFileChange"
                 style="display: none;"
+                multiple
               />
               <input
                 type="text"
-                :value="beforeFileName"
+                :value="beforeFileNames.join(', ')"
                 readonly
-                placeholder="No file chosen"
+                placeholder="No files chosen"
                 @click="triggerBeforeFileInput"
               />
             </div>
           </td>
-          <!-- Custom File Input for After Image (without Browse button) -->
+          <!-- Custom File Input for After Images (without Browse button) -->
           <td>
             <div class="custom-file-input">
               <input
@@ -184,12 +185,13 @@
                 ref="afterFileInput"
                 @change="handleAfterFileChange"
                 style="display: none;"
+                multiple
               />
               <input
                 type="text"
-                :value="afterFileName"
+                :value="afterFileNames.join(', ')"
                 readonly
-                placeholder="No file chosen"
+                placeholder="No files chosen"
                 @click="triggerAfterFileInput"
               />
             </div>
@@ -229,8 +231,8 @@ export default {
       beforeUploadedFiles: [],
       afterUploadedFiles: [],
       // File name to display in the text field
-      beforeFileName: '',
-      afterFileName: '',
+      beforeFileNames: [], // Array to store names of selected before files
+      afterFileNames: [],  // Array to store names of selected after files
       isSubmittingProblemUpdates: false, // New state to track problem updates submission status
       isSubmittingManpowerProgress: false // New state to track manpower progress submission status
     };
@@ -376,28 +378,30 @@ export default {
       this.$refs.beforeFileInput.click();
     },
     handleBeforeFileChange(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      this.beforeFileName = file.name; // Show the file name in the text field
-      this.uploadBeforeImage(file);
+      const files = Array.from(event.target.files);
+      if (!files.length) return;
+      this.beforeFileNames = files.map(file => file.name); // Show the file names in the text field
+      this.uploadBeforeImages(files);
     },
-    uploadBeforeImage(file) {
-      const formData = new FormData();
-      formData.append('files', file);
-      
-      axios
-        .post('http://localhost:1337/api/upload', formData, {
+    uploadBeforeImages(files) {
+      const uploadPromises = files.map(file => {
+        const formData = new FormData();
+        formData.append('files', file);
+        return axios.post('http://localhost:1337/api/upload', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
-        })
-        .then(response => {
-          console.log('Before image uploaded:', response.data);
-          // alert('Before image uploaded successfully!');
-          // Save the returned file data (an array) for later use in the payload.
-          this.beforeUploadedFiles = response.data;
+        });
+      });
+
+      Promise.all(uploadPromises)
+        .then(responses => {
+          responses.forEach(response => {
+            console.log('Before image uploaded:', response.data);
+            this.beforeUploadedFiles.push(...response.data);
+          });
         })
         .catch(error => {
-          console.error('Error uploading before image:', error);
-          alert('Error uploading before image.');
+          console.error('Error uploading before images:', error);
+          alert('Error uploading before images.');
         });
     },
     // Methods for the custom "After" file input:
@@ -405,28 +409,30 @@ export default {
       this.$refs.afterFileInput.click();
     },
     handleAfterFileChange(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      this.afterFileName = file.name; // Show the file name in the text field
-      this.uploadAfterImage(file);
+      const files = Array.from(event.target.files);
+      if (!files.length) return;
+      this.afterFileNames = files.map(file => file.name); // Show the file names in the text field
+      this.uploadAfterImages(files);
     },
-    uploadAfterImage(file) {
-      const formData = new FormData();
-      formData.append('files', file);
-      
-      axios
-        .post('http://localhost:1337/api/upload', formData, {
+    uploadAfterImages(files) {
+      const uploadPromises = files.map(file => {
+        const formData = new FormData();
+        formData.append('files', file);
+        return axios.post('http://localhost:1337/api/upload', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
-        })
-        .then(response => {
-          console.log('After image uploaded:', response.data);
-          // alert('After image uploaded successfully!');
-          // Save the returned file data for later use in the payload.
-          this.afterUploadedFiles = response.data;
+        });
+      });
+
+      Promise.all(uploadPromises)
+        .then(responses => {
+          responses.forEach(response => {
+            console.log('After image uploaded:', response.data);
+            this.afterUploadedFiles.push(...response.data);
+          });
         })
         .catch(error => {
-          console.error('Error uploading after image:', error);
-          alert('Error uploading after image.');
+          console.error('Error uploading after images:', error);
+          alert('Error uploading after images.');
         });
     },
     // Submit manpower progress to the API with relation to the project and include uploaded images.
@@ -463,8 +469,8 @@ export default {
             this.workDoneOrInProgress = '';
             this.beforeUploadedFiles = [];
             this.afterUploadedFiles = [];
-            this.beforeFileName = '';
-            this.afterFileName = '';
+            this.beforeFileNames = [];
+            this.afterFileNames = [];
           })
           .catch((error) => {
             console.error('Error adding manpower progress:', error);

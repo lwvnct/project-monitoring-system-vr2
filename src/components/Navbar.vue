@@ -1,5 +1,6 @@
 <template>
   <v-app>
+    <!-- App Bar -->
     <v-app-bar app color="dark-green" dark elevation="4">
       <!-- Left Section with Logo and Title -->
       <v-toolbar-title class="d-flex align-center title-style">
@@ -21,24 +22,20 @@
           <v-icon left>mdi-view-dashboard</v-icon>
           Dashboard
         </v-btn>
-        <v-btn text class="button-style" to="/projects">
+        <v-btn text class="button-style" to="/project-dashboard">
           <v-icon left>mdi-folder-multiple</v-icon>
-          Projects
+          Create Projects
         </v-btn>
-        <v-btn text class="button-style" to="/reports">
+        <!-- <v-btn text class="button-style" to="/reports">
           <v-icon left>mdi-file-chart</v-icon>
           Reports
-        </v-btn>
+        </v-btn> -->
       </div>
 
       <!-- User Menu -->
-      <v-menu offset-y>
+      <!-- <v-menu offset-y>
         <template v-slot:activator="{ on, attrs }">
-          <v-btn
-            icon
-            v-bind="attrs"
-            v-on="on"
-          >
+          <v-btn icon v-bind="attrs" v-on="on">
             <v-avatar color="grey lighten-2" size="32">
               <v-img src="@/assets/Caraga_State_University_1.png" alt="User Avatar"></v-img>
             </v-avatar>
@@ -75,7 +72,7 @@
             <v-list-item-title>Logout</v-list-item-title>
           </v-list-item>
         </v-list>
-      </v-menu>
+      </v-menu> -->
 
       <!-- Mobile Menu Button -->
       <v-app-bar-nav-icon class="d-md-none" @click="drawer = !drawer"></v-app-bar-nav-icon>
@@ -84,31 +81,40 @@
     <!-- Mobile Navigation Drawer -->
     <v-navigation-drawer v-model="drawer" app right temporary>
       <v-list nav dense>
-        <v-list-item-group
-          v-model="selectedItem"
-          color="dark-green"
-        >
+        <v-list-item-group v-model="selectedItem" color="dark-green">
           <v-list-item to="/" exact>
             <v-list-item-icon>
               <v-icon>mdi-view-dashboard</v-icon>
             </v-list-item-icon>
             <v-list-item-title>Dashboard</v-list-item-title>
           </v-list-item>
-          <v-list-item to="/projects">
+          <v-list-item to="/project-dashboard">
             <v-list-item-icon>
               <v-icon>mdi-folder-multiple</v-icon>
             </v-list-item-icon>
-            <v-list-item-title>Projects</v-list-item-title>
+            <v-list-item-title>Create Projects</v-list-item-title>
           </v-list-item>
-          <v-list-item to="/reports">
+          <!-- <v-list-item to="/reports">
             <v-list-item-icon>
               <v-icon>mdi-file-chart</v-icon>
             </v-list-item-icon>
             <v-list-item-title>Reports</v-list-item-title>
-          </v-list-item>
+          </v-list-item> -->
         </v-list-item-group>
       </v-list>
     </v-navigation-drawer>
+
+    <!-- Main Content Area -->
+    <!-- <v-main class="app">
+      <router-view></router-view>
+    </v-main> -->
+
+    <!-- Footer -->
+    <!-- <v-footer app>
+      <v-col class="text-center">
+        &copy; {{ new Date().getFullYear() }} Project Monitoring System. All Rights Reserved.
+      </v-col>
+    </v-footer> -->
   </v-app>
 </template>
 
@@ -121,13 +127,13 @@ export default {
       selectedItem: 0,
     };
   },
-  methods: {
-    logout() {
-      // Add your logout logic here
-      this.$store.dispatch('auth/logout');
-      this.$router.push('/login');
-    },
-  },
+  // methods: {
+  //   logout() {
+  //     // Add your logout logic here
+  //     this.$store.dispatch('auth/logout');
+  //     this.$router.push('/login');
+  //   },
+  // },
 };
 </script>
 
@@ -159,5 +165,15 @@ export default {
   .title-style {
     font-size: 1rem;
   }
+}
+
+/* Background Image Blended with Background Color */
+.app {
+  /*background-color: #bfbebe;*/
+  background-image: url('@/assets/caraga-state-university bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  /*background-blend-mode: overlay; /*Blends the image with the color */ 
 }
 </style>
