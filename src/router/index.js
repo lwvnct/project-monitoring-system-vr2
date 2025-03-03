@@ -11,7 +11,7 @@ import LoginForm from '@/components/LoginForm.vue';
 
 Vue.use(Router);
 
-export default new Router({
+const router = new Router({
   mode: 'history', // Use history mode for cleaner URLs
   routes: [
     {
@@ -57,3 +57,19 @@ export default new Router({
     // Add other routes as necessary
   ]
 });
+
+// Function to check if the user is authenticated
+function isAuthenticated() {
+  return !!localStorage.getItem('authToken');
+}
+
+// Global navigation guard
+router.beforeEach((to, from, next) => {
+  if (to.name !== 'LoginForm' && !isAuthenticated()) {
+    next({ name: 'LoginForm' });
+  } else {
+    next();
+  }
+});
+
+export default router;
