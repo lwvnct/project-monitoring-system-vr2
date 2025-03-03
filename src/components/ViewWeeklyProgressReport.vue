@@ -144,7 +144,8 @@
           <td>{{ progress.no_of_manpower }}</td>
           <td>{{ progress.name_of_personel }}</td>
           <td colspan="3">
-            <div>{{ progress.work_done }}</div>
+            <!-- Display the related subDescription instead of work_done -->
+            <div>{{ progress.subDescription }}</div>
             <div class="created-at" style="font-size: 0.8rem; color: gray;">
               Created on: {{ formatDate(progress.createdAt) }}
             </div>
@@ -239,9 +240,9 @@ export default {
         console.error("Error fetching project header data:", error);
       });
 
-    // Fetch manpower progress records related to the project
+    // Fetch project item modified records (instead of manpower progresses)
     axios
-      .get(`http://localhost:1337/api/manpower-progresses?populate=*`)
+      .get(`http://localhost:1337/api/project-item-modifieds?populate=*`)
       .then((response) => {
         if (
           response.data &&
@@ -252,7 +253,7 @@ export default {
         }
       })
       .catch((error) => {
-        console.error("Error fetching manpower progress data:", error);
+        console.error("Error fetching project item modified data:", error);
       });
   },
   computed: {

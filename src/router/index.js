@@ -7,14 +7,20 @@ import ProjectDetails from '../components/ProjectDetails.vue';
 import WorkAccomplished from '@/components/WorkAccomplished.vue';
 import WeeklyProgressReport from '@/components/WeeklyProgessReport.vue';
 import ViewWeeklyProgressReport from '@/components/ViewWeeklyProgressReport.vue';
+import LoginForm from '@/components/LoginForm.vue';
 
 Vue.use(Router);
 
 export default new Router({
-  mode: 'history', // Optional: Use history mode for cleaner URLs
+  mode: 'history', // Use history mode for cleaner URLs
   routes: [
     {
       path: '/',
+      name: 'LoginForm',
+      component: LoginForm
+    },
+    {
+      path: '/sample-dashboard',
       name: 'SampleDashboard',
       component: SampleDashboard
     },
@@ -48,7 +54,6 @@ export default new Router({
       name: 'ViewWeeklyProgressReport',
       component: ViewWeeklyProgressReport
     },
-
     // Add other routes as necessary
   ]
 });

@@ -8,7 +8,7 @@
     <button @click="downloadPDF" class="download-btn">
       Download as PDF
     </button>
-    <table ref="pdfTable" border="1" class="mx-auto mt-5">
+    <table ref="pdfTable" border="1" class="mx-auto my-5">
       <thead>
         <tr>
           <th colspan="14" class="table-header">Project Details</th>

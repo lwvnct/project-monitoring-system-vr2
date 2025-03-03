@@ -45,17 +45,7 @@
             </span>
           </th>
         </tr>
-        <!-- Wrap the date inputs in a flex container -->
-        <!-- <tr>
-          <th colspan="13" class="smalltext">
-            As of:
-            <span class="date-inputs">
-              <input type="date" v-model="asOf" placeholder="Enter as of date" /> 
-              -
-              <input type="date" v-model="asOf" placeholder="Enter as of date" />
-            </span>
-          </th>
-        </tr> -->
+        <!-- (Optional date inputs commented out) -->
         <tr>
           <th colspan="13" class="table-title">MATERIAL PROGRESS</th>
         </tr>
@@ -127,79 +117,78 @@
           <th class="bgcolor">BEFORE</th>
           <th class="bgcolor">AFTER</th>
         </tr>
-        <tr>
+        <!-- Loop through headerSections to show individual input fields -->
+        <tr v-for="header in headerSections" :key="header.id + '-mp'">
           <td></td>
           <td>
             <input
               type="text"
-              v-model="manpowerDesignation"
+              v-model="header.manpowerDesignation"
               placeholder="Enter designation"
             />
           </td>
           <td>
             <input
               type="number"
-              v-model.number="noOfManpower"
+              v-model.number="header.noOfManpower"
               placeholder="Enter number"
             />
           </td>
           <td>
             <input
               type="text"
-              v-model="nameOfPersonel"
+              v-model="header.nameOfPersonel"
               placeholder="Enter personnel name"
             />
           </td>
+          <!-- Preserved computed activity -->
           <td colspan="3">
-            <textarea
-              type="text"
-              v-model="workDoneOrInProgress"
-              placeholder="Enter work progress"
-              style="width: 100%"
-            ></textarea>
+            <span>
+              {{ getThisDateActivity(header) || 'No activity available' }}
+            </span>
           </td>
-          <!-- Custom File Input for Before Images (without Browse button) -->
+          <!-- Custom File Input for Before Images -->
           <td>
             <div class="custom-file-input">
               <input
                 type="file"
-                ref="beforeFileInput"
-                @change="handleBeforeFileChange"
+                :ref="'beforeFileInput_' + header.id"
+                @change="handleBeforeFileChange($event, header)"
                 style="display: none;"
                 multiple
               />
               <input
                 type="text"
-                :value="beforeFileNames.join(', ')"
+                :value="header.beforeFileNames.join(', ')"
                 readonly
                 placeholder="No files chosen"
-                @click="triggerBeforeFileInput"
+                @click="triggerBeforeFileInput(header)"
               />
             </div>
           </td>
-          <!-- Custom File Input for After Images (without Browse button) -->
+          <!-- Custom File Input for After Images -->
           <td>
             <div class="custom-file-input">
               <input
                 type="file"
-                ref="afterFileInput"
-                @change="handleAfterFileChange"
+                :ref="'afterFileInput_' + header.id"
+                @change="handleAfterFileChange($event, header)"
                 style="display: none;"
                 multiple
               />
               <input
                 type="text"
-                :value="afterFileNames.join(', ')"
+                :value="header.afterFileNames.join(', ')"
                 readonly
                 placeholder="No files chosen"
-                @click="triggerAfterFileInput"
+                @click="triggerAfterFileInput(header)"
               />
             </div>
           </td>
         </tr>
       </thead>
     </table>
-    <!-- Global Submit Buttons for Manpower Progress and Problem Encountered Fields -->
+    <!-- Global Submit Buttons -->
     <div class="text-center my-3">
       <button type="button" @click="submitAllProblemUpdates">
         Submit Problem Updates
@@ -207,7 +196,6 @@
       <button type="button" @click="submitManpowerProgress">
         Submit Manpower Progress
       </button>
-      
     </div>
   </div>
 </template>
@@ -219,22 +207,10 @@ export default {
   name: "WeeklyProgressReport",
   data() {
     return {
-      project: {},          // Project details (set from the first headerSection)
-      headerSections: [],   // Array to hold all header sections
+      project: {},
+      headerSections: [],
       isRemainingUpdated: false,
-      asOf: '',
-      manpowerDesignation: '',
-      noOfManpower: '',
-      nameOfPersonel: '',
-      workDoneOrInProgress: '',
-      // Uploaded file data arrays (for use in the payload)
-      beforeUploadedFiles: [],
-      afterUploadedFiles: [],
-      // File name to display in the text field
-      beforeFileNames: [], // Array to store names of selected before files
-      afterFileNames: [],  // Array to store names of selected after files
-      isSubmittingProblemUpdates: false, // New state to track problem updates submission status
-      isSubmittingManpowerProgress: false // New state to track manpower progress submission status
+      asOf: ''
     };
   },
   mounted() {
@@ -249,18 +225,22 @@ export default {
           response.data.data &&
           response.data.data.length > 0
         ) {
-          // Initialize each header with its own problemEncountered property.
           this.headerSections = response.data.data.map(header => {
             return {
               ...header,
-              problemEncountered: header.problemEncountered || ''
+              problemEncountered: header.problemEncountered || '',
+              manpowerDesignation: '',
+              noOfManpower: null,
+              nameOfPersonel: '',
+              beforeUploadedFiles: [],
+              afterUploadedFiles: [],
+              beforeFileNames: [],
+              afterFileNames: []
             };
           });
-          // Use the first headerSection's project details for the header
           if (this.headerSections[0] && this.headerSections[0].project) {
             this.project = this.headerSections[0].project;
           }
-          // Only update the "remaining" field if it hasn't been updated before
           if (!this.isRemainingUpdated) {
             this.updateRemainingField().then(() => {
               if (performance.navigation.type === 1) {
@@ -280,7 +260,6 @@ export default {
       });
   },
   methods: {
-    // Compute totals for WT% and % PREV columns
     computeTotals(header) {
       const items = header.items || [];
       const projectItemModifieds = header.project_item_modifieds || [];
@@ -294,7 +273,6 @@ export default {
       );
       return { totalWTPercent, totalPrevWTPercents };
     },
-    // Extract subDescriptions with their individual values for items with new EnteredQuantity
     getThisDateActivity(header) {
       if (!header.items || !header.project_item_modifieds) return '';
       const activities = header.project_item_modifieds
@@ -308,19 +286,16 @@ export default {
         .filter(text => text !== '');
       return activities.join(', ');
     },
-    // Update the "remaining" field in the API using the computed WT% value.
     updateRemainingField() {
       if (this.isRemainingUpdated) {
         console.log("updateRemainingField did not run automatically because it has already been updated.");
         return Promise.resolve();
       }
-  
       const updatePromises = this.headerSections.map(header => {
         if (header.remaining !== undefined && header.remaining !== null) {
           console.log(`Skipping update for header ${header.documentId} as it has already been updated.`);
           return Promise.resolve();
         }
-  
         const totalWTPercent = this.computeTotals(header).totalWTPercent;
         const remainingValue = totalWTPercent !== null ? totalWTPercent : 'N/A';
         return axios
@@ -335,16 +310,14 @@ export default {
             console.error(`Error updating remaining for header ${header.documentId}:`, error);
           });
       });
-  
       return Promise.all(updatePromises).then(() => {
         this.isRemainingUpdated = true;
         localStorage.setItem('isRemainingUpdated', 'true');
       });
     },
-    // Submit updates for all problemEncountered fields for each headerSection.
     async submitAllProblemUpdates() {
-      if (this.isSubmittingProblemUpdates) return; // Prevent multiple submissions
-      this.isSubmittingProblemUpdates = true; // Set submitting state to true
+      if (this.isSubmittingProblemUpdates) return;
+      this.isSubmittingProblemUpdates = true;
       try {
         const updatePromises = this.headerSections.map(header => {
           return axios
@@ -359,7 +332,6 @@ export default {
               return Promise.reject(error);
             });
         });
-    
         Promise.all(updatePromises)
           .then(() => {
             alert("All problem encountered fields updated successfully.");
@@ -370,20 +342,19 @@ export default {
       } catch (error) {
         console.error("Error submitting problem updates:", error);
       } finally {
-        this.isSubmittingProblemUpdates = false; // Reset submitting state
+        this.isSubmittingProblemUpdates = false;
       }
     },
-    // Methods for the custom "Before" file input:
-    triggerBeforeFileInput() {
-      this.$refs.beforeFileInput.click();
+    triggerBeforeFileInput(header) {
+      this.$refs['beforeFileInput_' + header.id][0].click();
     },
-    handleBeforeFileChange(event) {
+    handleBeforeFileChange(event, header) {
       const files = Array.from(event.target.files);
       if (!files.length) return;
-      this.beforeFileNames = files.map(file => file.name); // Show the file names in the text field
-      this.uploadBeforeImages(files);
+      header.beforeFileNames = files.map(file => file.name);
+      this.uploadBeforeImages(files, header);
     },
-    uploadBeforeImages(files) {
+    uploadBeforeImages(files, header) {
       const uploadPromises = files.map(file => {
         const formData = new FormData();
         formData.append('files', file);
@@ -391,12 +362,11 @@ export default {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
       });
-
       Promise.all(uploadPromises)
         .then(responses => {
           responses.forEach(response => {
             console.log('Before image uploaded:', response.data);
-            this.beforeUploadedFiles.push(...response.data);
+            header.beforeUploadedFiles.push(...response.data);
           });
         })
         .catch(error => {
@@ -404,17 +374,16 @@ export default {
           alert('Error uploading before images.');
         });
     },
-    // Methods for the custom "After" file input:
-    triggerAfterFileInput() {
-      this.$refs.afterFileInput.click();
+    triggerAfterFileInput(header) {
+      this.$refs['afterFileInput_' + header.id][0].click();
     },
-    handleAfterFileChange(event) {
+    handleAfterFileChange(event, header) {
       const files = Array.from(event.target.files);
       if (!files.length) return;
-      this.afterFileNames = files.map(file => file.name); // Show the file names in the text field
-      this.uploadAfterImages(files);
+      header.afterFileNames = files.map(file => file.name);
+      this.uploadAfterImages(files, header);
     },
-    uploadAfterImages(files) {
+    uploadAfterImages(files, header) {
       const uploadPromises = files.map(file => {
         const formData = new FormData();
         formData.append('files', file);
@@ -422,12 +391,11 @@ export default {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
       });
-
       Promise.all(uploadPromises)
         .then(responses => {
           responses.forEach(response => {
             console.log('After image uploaded:', response.data);
-            this.afterUploadedFiles.push(...response.data);
+            header.afterUploadedFiles.push(...response.data);
           });
         })
         .catch(error => {
@@ -435,51 +403,66 @@ export default {
           alert('Error uploading after images.');
         });
     },
-    // Submit manpower progress to the API with relation to the project and include uploaded images.
     async submitManpowerProgress() {
-      if (this.isSubmittingManpowerProgress) return; // Prevent multiple submissions
-      this.isSubmittingManpowerProgress = true; // Set submitting state to true
+      if (this.isSubmittingManpowerProgress) return;
+      this.isSubmittingManpowerProgress = true;
       try {
-        const payload = {
-          data: {
-            manpower_designation: this.manpowerDesignation,
-            no_of_manpower: this.noOfManpower,
-            name_of_personel: this.nameOfPersonel,
-            work_done: this.workDoneOrInProgress,
-            project: this.project.id,
-            before_image: this.beforeUploadedFiles.length
-              ? this.beforeUploadedFiles.map(file => file.id)
-              : [],
-            after_image: this.afterUploadedFiles.length
-              ? this.afterUploadedFiles.map(file => file.id)
-              : []
-          }
-        };
-        console.log('Payload for manpower progress:', payload);
-        
-        axios
-          .post('http://localhost:1337/api/manpower-progresses', payload)
-          .then((response) => {
-            console.log('Manpower progress added successfully:', response.data);
-            alert("Manpower progress submitted successfully!");
-            // Reset input fields and uploaded file data
-            this.manpowerDesignation = '';
-            this.noOfManpower = '';
-            this.nameOfPersonel = '';
-            this.workDoneOrInProgress = '';
-            this.beforeUploadedFiles = [];
-            this.afterUploadedFiles = [];
-            this.beforeFileNames = [];
-            this.afterFileNames = [];
-          })
-          .catch((error) => {
-            console.error('Error adding manpower progress:', error);
-            alert("Error submitting manpower progress. Please try again.");
-          });
+        const submitPromises = this.headerSections.map(header => {
+          const payload = {
+            data: {
+              manpower_designation: header.manpowerDesignation,
+              no_of_manpower: header.noOfManpower,
+              name_of_personel: header.nameOfPersonel,
+              project: this.project.id,
+              before_image: header.beforeUploadedFiles.length
+                ? header.beforeUploadedFiles.map(file => file.id)
+                : [],
+              after_image: header.afterUploadedFiles.length
+                ? header.afterUploadedFiles.map(file => file.id)
+                : []
+            }
+          };
+          return axios.post('http://localhost:1337/api/manpower-progresses', payload)
+            .then(() => {
+              if (header.project_item_modifieds && header.project_item_modifieds.length) {
+                const updatePromises = header.project_item_modifieds.map(mod => {
+                  // Use documentId here instead of mod.id
+                  return axios.put(`http://localhost:1337/api/project-item-modifieds/${mod.documentId}`, {
+                    data: {
+                      manpower_designation: header.manpowerDesignation,
+                      no_of_manpower: header.noOfManpower,
+                      name_of_personel: header.nameOfPersonel,
+                      before_image: header.beforeUploadedFiles.length
+                        ? header.beforeUploadedFiles.map(file => file.id)
+                        : [],
+                      after_image: header.afterUploadedFiles.length
+                        ? header.afterUploadedFiles.map(file => file.id)
+                        : []
+                    }
+                  });
+                });
+                return Promise.all(updatePromises);
+              }
+              return Promise.resolve();
+            });
+        });
+        await Promise.all(submitPromises);
+        console.log('Manpower progress and project item modifieds updated successfully.');
+        alert("Manpower progress submitted and project item modifieds updated successfully!");
+        this.headerSections.forEach(header => {
+          header.manpowerDesignation = '';
+          header.noOfManpower = null;
+          header.nameOfPersonel = '';
+          header.beforeUploadedFiles = [];
+          header.afterUploadedFiles = [];
+          header.beforeFileNames = [];
+          header.afterFileNames = [];
+        });
       } catch (error) {
         console.error("Error submitting manpower progress:", error);
+        alert("Error submitting manpower progress. Please try again.");
       } finally {
-        this.isSubmittingManpowerProgress = false; // Reset submitting state
+        this.isSubmittingManpowerProgress = false;
       }
     }
   }
@@ -492,7 +475,6 @@ export default {
   border-collapse: collapse;
   background-color: #f0f0f0;
 }
-
 .progress-table th,
 .progress-table td {
   border: 1px solid #090909;
@@ -500,44 +482,35 @@ export default {
   padding-block: 3px;
   text-align: center;
 }
-
 .notBold {
   font-weight: normal;
 }
-
 .bgcolor {
   background-color: rgb(239, 213, 40);
 }
-
 .table-title {
   font-weight: bold;
   font-size: 1.2rem;
 }
-
 .vertical {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   font-size: small;
 }
-
 .wt-percent,
 .prev-wt-percent,
 .remaining-percent {
   text-align: center;
   font-weight: normal;
 }
-
 .smalltext {
   font-size: 0.8rem;
 }
-
-/* Style for inline date inputs */
 .date-inputs {
   display: inline-flex;
   gap: 10px;
   align-items: center;
 }
-
 input[type="text"],
 input[type="number"],
 input[type="date"] {
@@ -545,12 +518,10 @@ input[type="date"] {
   padding: 2px;
   box-sizing: border-box;
 }
-
 .custom-file-input {
   display: flex;
   align-items: center;
 }
-
 .custom-file-input input[type="text"] {
   flex: 1;
   padding: 6px;
@@ -559,7 +530,6 @@ input[type="date"] {
   cursor: pointer;
   background-color: #fff;
 }
-
 button {
   padding: 10px 20px;
   font-size: 1rem;
@@ -570,7 +540,6 @@ button {
   cursor: pointer;
   margin: 0 20px;
 }
-
 button:hover {
   background-color: #065d12;
 }
