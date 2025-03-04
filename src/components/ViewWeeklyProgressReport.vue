@@ -9,7 +9,7 @@
       <thead>
         <tr>
           <th colspan="13">
-            <img src="@/assets/h0.png" alt="Header Image" class="header-image">
+            <img src="@/assets/h0.png" alt="Header Image" class="header-image" />
           </th>
         </tr>
       </thead>
@@ -149,7 +149,8 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="progress in manpowerProgresses" :key="progress.id">
+        <!-- Using the computed property to hide rows with null column values -->
+        <tr v-for="progress in filteredManpowerProgresses" :key="progress.id">
           <td></td>
           <td>{{ progress.manpower_designation }}</td>
           <td>{{ progress.no_of_manpower }}</td>
@@ -163,7 +164,11 @@
           </td>
           <td>
             <div v-if="progress.before_image && progress.before_image.length">
-              <div v-for="(image, index) in (showAllBeforeImages[progress.id] ? progress.before_image : [progress.before_image[0]])" :key="index" class="image-container">
+              <div
+                v-for="(image, index) in (showAllBeforeImages[progress.id] ? progress.before_image : [progress.before_image[0]])"
+                :key="index"
+                class="image-container"
+              >
                 <!-- Display image -->
                 <img
                   v-if="imageBelongsToProject(image)"
@@ -180,7 +185,11 @@
           </td>
           <td>
             <div v-if="progress.after_image && progress.after_image.length">
-              <div v-for="(image, index) in (showAllAfterImages[progress.id] ? progress.after_image : [progress.after_image[0]])" :key="index" class="image-container">
+              <div
+                v-for="(image, index) in (showAllAfterImages[progress.id] ? progress.after_image : [progress.after_image[0]])"
+                :key="index"
+                class="image-container"
+              >
                 <!-- Display image -->
                 <img
                   v-if="imageBelongsToProject(image)"
@@ -275,6 +284,15 @@ export default {
   computed: {
     totalRemainingPercent() {
       return this.headerSections.reduce((acc, header) => acc + (header.remaining || 0), 0);
+    },
+    // Computed property to filter out rows with any null column values
+    filteredManpowerProgresses() {
+      return this.manpowerProgresses.filter(progress => 
+        progress.manpower_designation != null &&
+        progress.no_of_manpower != null &&
+        progress.name_of_personel != null &&
+        progress.subDescription != null
+      );
     }
   },
   methods: {
@@ -304,14 +322,14 @@ export default {
         .filter(text => text !== '');
       return activities.join(', ');
     },
-    // Updated getImageUrl: simply returns the full image URL using the relative URL from Strapi API
+    // Returns the full image URL using the relative URL from Strapi API
     getImageUrl(image) {
       if (image && image.url) {
         return `http://localhost:1337${image.url}`;
       }
       return '';
     },
-    // Updated imageBelongsToProject: returns true if an image URL exists (adjust as needed)
+    // Returns true if an image URL exists
     imageBelongsToProject(image) {
       return image && image.url;
     },

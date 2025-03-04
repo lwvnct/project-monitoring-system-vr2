@@ -118,77 +118,9 @@
           <th class="bgcolor">AFTER</th>
         </tr>
       </thead>
-      <!-- For each header, create a row per individual subDescription or a fallback row -->
+      <!-- For each header, create a row per individual subDescription (rows with "No activity available" are now hidden) -->
       <tbody>
         <template v-for="header in headerSections">
-          <!-- If no subDescriptions exist, render a fallback row using index 0 -->
-          <tr
-            v-if="getSubDescriptions(header).length === 0"
-            :key="header.id + '-mp-noactivity'"
-          >
-            <td></td>
-            <td>
-              <input
-                type="text"
-                v-model="getManpowerRecord(header, 0).manpowerDesignation"
-                placeholder="Enter designation"
-              />
-            </td>
-            <td>
-              <input
-                type="number"
-                v-model.number="getManpowerRecord(header, 0).noOfManpower"
-                placeholder="Enter number"
-              />
-            </td>
-            <td>
-              <input
-                type="text"
-                v-model="getManpowerRecord(header, 0).nameOfPersonel"
-                placeholder="Enter personnel name"
-              />
-            </td>
-            <td colspan="3">
-              <span>No activity available</span>
-            </td>
-            <td>
-              <div class="custom-file-input">
-                <input
-                  type="file"
-                  :ref="'beforeFileInput_' + header.id + '_0'"
-                  @change="handleBeforeFileChange($event, header, 0)"
-                  style="display: none;"
-                  multiple
-                />
-                <input
-                  type="text"
-                  :value="getManpowerRecord(header, 0).beforeFileNames.join(', ')"
-                  readonly
-                  placeholder="No files chosen"
-                  @click="triggerBeforeFileInput(header, 0)"
-                />
-              </div>
-            </td>
-            <td>
-              <div class="custom-file-input">
-                <input
-                  type="file"
-                  :ref="'afterFileInput_' + header.id + '_0'"
-                  @change="handleAfterFileChange($event, header, 0)"
-                  style="display: none;"
-                  multiple
-                />
-                <input
-                  type="text"
-                  :value="getManpowerRecord(header, 0).afterFileNames.join(', ')"
-                  readonly
-                  placeholder="No files chosen"
-                  @click="triggerAfterFileInput(header, 0)"
-                />
-              </div>
-            </td>
-          </tr>
-          <!-- Otherwise, render a row for each subDescription -->
           <tr
             v-for="(desc, index) in getSubDescriptions(header)"
             :key="header.id + '-mp-' + index"
