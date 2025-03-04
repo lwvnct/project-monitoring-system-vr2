@@ -85,7 +85,7 @@
 
     <!-- Update Credentials Dialog -->
     <v-dialog v-model="dialogUpdateCredentials" max-width="500">
-      <v-card>
+      <v-card class="form-card">
         <v-card-title class="headline">Update Credentials</v-card-title>
         <v-card-text>
           <v-text-field

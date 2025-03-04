@@ -195,4 +195,13 @@ export default {
   margin-top: 15px;
   text-align: center;
 }
+/* Center the form in the middle */
+.login-form {
+  padding:30px;
+  margin: auto;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  position: absolute;
+}
 </style>
