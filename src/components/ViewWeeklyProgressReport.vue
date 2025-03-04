@@ -107,6 +107,10 @@
           <td class="problem-cell">
             {{ header.problem_encountered || 'No Problem Encountered' }}
           </td>
+          <!-- Display project image only if available -->
+          <td v-if="project.documentId === documentId && project.image">
+            <img :src="getImageUrl(project.image)" alt="Project Image" class="header-image" />
+          </td>
         </tr>
         <tr>
           <td colspan="3" class="table-title">Total</td>
@@ -160,7 +164,9 @@
           <td>
             <div v-if="progress.before_image && progress.before_image.length">
               <div v-for="(image, index) in (showAllBeforeImages[progress.id] ? progress.before_image : [progress.before_image[0]])" :key="index" class="image-container">
+                <!-- Display image -->
                 <img
+                  v-if="imageBelongsToProject(image)"
                   :src="getImageUrl(image)"
                   alt="Before Image"
                   style="width:100px; cursor: pointer; margin-bottom: 5px;"
@@ -175,7 +181,9 @@
           <td>
             <div v-if="progress.after_image && progress.after_image.length">
               <div v-for="(image, index) in (showAllAfterImages[progress.id] ? progress.after_image : [progress.after_image[0]])" :key="index" class="image-container">
+                <!-- Display image -->
                 <img
+                  v-if="imageBelongsToProject(image)"
                   :src="getImageUrl(image)"
                   alt="After Image"
                   style="width:100px; cursor: pointer; margin-bottom: 5px;"
@@ -216,18 +224,19 @@ export default {
       project: {},
       headerSections: [],
       manpowerProgresses: [],
-      // Modal related data properties
       isImageModalOpen: false,
       selectedImage: '',
       selectedImages: [],
       showAllBeforeImages: {},
-      showAllAfterImages: {}
+      showAllAfterImages: {},
+      // Capture documentId from route parameters
+      documentId: this.$route.params.documentId
     };
   },
   mounted() {
-    // Fetch header sections (and project details) from API
+    // Fetch header sections for the current project using documentId filter
     axios
-      .get(`http://localhost:1337/api/header-per-project-sections?populate=*`)
+      .get(`http://localhost:1337/api/header-per-project-sections?populate=*&filters[project][documentId][$eq]=${this.documentId}`)
       .then((response) => {
         if (
           response.data &&
@@ -247,9 +256,9 @@ export default {
         console.error("Error fetching project header data:", error);
       });
 
-    // Fetch project item modified records (instead of manpower progresses)
+    // Fetch project item modified records filtered by nested relation
     axios
-      .get(`http://localhost:1337/api/project-item-modifieds?populate=*`)
+      .get(`http://localhost:1337/api/project-item-modifieds?populate=*&filters[header_per_project_section][project][documentId][$eq]=${this.documentId}`)
       .then((response) => {
         if (
           response.data &&
@@ -295,8 +304,16 @@ export default {
         .filter(text => text !== '');
       return activities.join(', ');
     },
+    // Updated getImageUrl: simply returns the full image URL using the relative URL from Strapi API
     getImageUrl(image) {
-      return image && image.url ? `http://localhost:1337${image.url}` : '';
+      if (image && image.url) {
+        return `http://localhost:1337${image.url}`;
+      }
+      return '';
+    },
+    // Updated imageBelongsToProject: returns true if an image URL exists (adjust as needed)
+    imageBelongsToProject(image) {
+      return image && image.url;
     },
     openImageModal(url) {
       this.selectedImage = url;
@@ -318,7 +335,6 @@ export default {
       }
     },
     // Capture the table, add a small timestamp at the top-left, and generate a one-page PDF
-    // with the table centered in the remaining area.
     downloadPDF() {
       // Backup current toggle states
       const backupShowAllBeforeImages = { ...this.showAllBeforeImages };

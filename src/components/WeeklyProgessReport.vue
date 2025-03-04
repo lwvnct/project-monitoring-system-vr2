@@ -520,47 +520,28 @@ export default {
             ? header.manpowerRecords
             : [this.getManpowerRecord(header, 0)];
           records.forEach((record, index) => {
-            const payload = {
-              data: {
-                manpower_designation: record.manpowerDesignation,
-                no_of_manpower: record.noOfManpower,
-                name_of_personel: record.nameOfPersonel,
-                project: this.project.id,
-                before_image: record.beforeUploadedFiles.length
-                  ? record.beforeUploadedFiles.map(file => file.id)
-                  : [],
-                after_image: record.afterUploadedFiles.length
-                  ? record.afterUploadedFiles.map(file => file.id)
-                  : []
-              }
-            };
+            // Remove the payload for "manpower-progresses" API
             submitPromises.push(
-              axios.post('http://localhost:1337/api/manpower-progresses', payload)
-                .then(() => {
-                  // If project_item_modifieds exist, update the corresponding one
-                  if (header.project_item_modifieds && header.project_item_modifieds[index]) {
-                    return axios.put(`http://localhost:1337/api/project-item-modifieds/${header.project_item_modifieds[index].documentId}`, {
-                      data: {
-                        manpower_designation: record.manpowerDesignation,
-                        no_of_manpower: record.noOfManpower,
-                        name_of_personel: record.nameOfPersonel,
-                        before_image: record.beforeUploadedFiles.length
-                          ? record.beforeUploadedFiles.map(file => file.id)
-                          : [],
-                        after_image: record.afterUploadedFiles.length
-                          ? record.afterUploadedFiles.map(file => file.id)
-                          : []
-                      }
-                    });
-                  }
-                  return Promise.resolve();
-                })
+              // Only update the corresponding project_item_modifieds
+              axios.put(`http://localhost:1337/api/project-item-modifieds/${header.project_item_modifieds[index].documentId}`, {
+                data: {
+                  manpower_designation: record.manpowerDesignation,
+                  no_of_manpower: record.noOfManpower,
+                  name_of_personel: record.nameOfPersonel,
+                  before_image: record.beforeUploadedFiles.length
+                    ? record.beforeUploadedFiles.map(file => file.id)
+                    : [],
+                  after_image: record.afterUploadedFiles.length
+                    ? record.afterUploadedFiles.map(file => file.id)
+                    : []
+                }
+              })
             );
           });
         });
         await Promise.all(submitPromises);
-        console.log('Manpower progress and project item modifieds updated successfully.');
-        alert("Manpower progress submitted and project item modifieds updated successfully!");
+        console.log('Project item modifieds updated successfully.');
+        alert("Project item modifieds updated successfully!");
         // Reset the manpower records for each header
         this.headerSections.forEach(header => {
           header.manpowerRecords = [];

@@ -291,8 +291,6 @@
   .icon-button {
     text-decoration: none;
   }
-  
-  /* Floating Action Button styling */
   .floating-btn {
     position: fixed;
     bottom: 20px;
@@ -300,4 +298,3 @@
     z-index: 100;
   }
   </style>
-  

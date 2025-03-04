@@ -7,6 +7,7 @@
         <p>Competence, Service, and Uprightness</p>
       </div>
     </div>
+    <!-- Login form -->
     <form @submit.prevent="login">
       <div class="form-group">
         <label for="identifier" class="label-with-icon">
@@ -70,11 +71,11 @@ export default {
   },
   methods: {
     login() {
-      // Clear previous messages
+      // Clear previous error and success messages
       this.error = '';
       this.success = '';
       
-      // Basic validation
+      // Validate input fields
       if (!this.identifier || !this.password) {
         this.error = 'Please fill in both the identifier and password.';
         return;
@@ -82,6 +83,7 @@ export default {
       
       this.loading = true;
       
+      // Send login request to the server
       axios
         .post('http://localhost:1337/api/auth/local', {
           identifier: this.identifier,
@@ -90,9 +92,9 @@ export default {
         .then(response => {
           console.log('Logged in successfully:', response.data);
           this.success = 'Login successful! Redirecting...';
-          // Store the authentication token
+          // Store the authentication token in local storage
           localStorage.setItem('authToken', response.data.jwt);
-          // Redirect to App.vue
+          // Redirect to the dashboard
           this.$router.push('/sample-dashboard');
         })
         .catch(err => {

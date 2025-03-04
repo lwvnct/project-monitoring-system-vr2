@@ -92,9 +92,9 @@ export default {
         wt_percent: null,
         header_per_project_section: null,
       },
-      sectionId: null,
-      isSubmitting: false, // Add this line
-      isProjectItemButtonDisabled: false, // Add this line
+      sectionId: null, // To store the ID of the created Project Section
+      isSubmitting: false, // To prevent multiple submissions
+      isProjectItemButtonDisabled: false, // To disable the Project Item button until the Project Section is submitted
     };
   },
   created() {
@@ -105,6 +105,7 @@ export default {
     console.log("Extracted Project ID:", this.formData.project);
     console.log("Extracted Second Project ID:", this.formData.project_with_modified_datum);
 
+    // Redirect to the home page if no project ID is found
     if (!this.formData.project || !this.formData.project_with_modified_datum) {
       alert("No project ID found.");
       this.$router.push("/");
