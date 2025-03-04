@@ -117,76 +117,146 @@
           <th class="bgcolor">BEFORE</th>
           <th class="bgcolor">AFTER</th>
         </tr>
-        <!-- Loop through headerSections to show individual input fields -->
-        <tr v-for="header in headerSections" :key="header.id + '-mp'">
-          <td></td>
-          <td>
-            <input
-              type="text"
-              v-model="header.manpowerDesignation"
-              placeholder="Enter designation"
-            />
-          </td>
-          <td>
-            <input
-              type="number"
-              v-model.number="header.noOfManpower"
-              placeholder="Enter number"
-            />
-          </td>
-          <td>
-            <input
-              type="text"
-              v-model="header.nameOfPersonel"
-              placeholder="Enter personnel name"
-            />
-          </td>
-          <!-- Preserved computed activity -->
-          <td colspan="3">
-            <span>
-              {{ getThisDateActivity(header) || 'No activity available' }}
-            </span>
-          </td>
-          <!-- Custom File Input for Before Images -->
-          <td>
-            <div class="custom-file-input">
-              <input
-                type="file"
-                :ref="'beforeFileInput_' + header.id"
-                @change="handleBeforeFileChange($event, header)"
-                style="display: none;"
-                multiple
-              />
-              <input
-                type="text"
-                :value="header.beforeFileNames.join(', ')"
-                readonly
-                placeholder="No files chosen"
-                @click="triggerBeforeFileInput(header)"
-              />
-            </div>
-          </td>
-          <!-- Custom File Input for After Images -->
-          <td>
-            <div class="custom-file-input">
-              <input
-                type="file"
-                :ref="'afterFileInput_' + header.id"
-                @change="handleAfterFileChange($event, header)"
-                style="display: none;"
-                multiple
-              />
-              <input
-                type="text"
-                :value="header.afterFileNames.join(', ')"
-                readonly
-                placeholder="No files chosen"
-                @click="triggerAfterFileInput(header)"
-              />
-            </div>
-          </td>
-        </tr>
       </thead>
+      <!-- For each header, create a row per individual subDescription or a fallback row -->
+      <tbody>
+        <template v-for="header in headerSections">
+          <!-- If no subDescriptions exist, render a fallback row using index 0 -->
+          <tr
+            v-if="getSubDescriptions(header).length === 0"
+            :key="header.id + '-mp-noactivity'"
+          >
+            <td></td>
+            <td>
+              <input
+                type="text"
+                v-model="getManpowerRecord(header, 0).manpowerDesignation"
+                placeholder="Enter designation"
+              />
+            </td>
+            <td>
+              <input
+                type="number"
+                v-model.number="getManpowerRecord(header, 0).noOfManpower"
+                placeholder="Enter number"
+              />
+            </td>
+            <td>
+              <input
+                type="text"
+                v-model="getManpowerRecord(header, 0).nameOfPersonel"
+                placeholder="Enter personnel name"
+              />
+            </td>
+            <td colspan="3">
+              <span>No activity available</span>
+            </td>
+            <td>
+              <div class="custom-file-input">
+                <input
+                  type="file"
+                  :ref="'beforeFileInput_' + header.id + '_0'"
+                  @change="handleBeforeFileChange($event, header, 0)"
+                  style="display: none;"
+                  multiple
+                />
+                <input
+                  type="text"
+                  :value="getManpowerRecord(header, 0).beforeFileNames.join(', ')"
+                  readonly
+                  placeholder="No files chosen"
+                  @click="triggerBeforeFileInput(header, 0)"
+                />
+              </div>
+            </td>
+            <td>
+              <div class="custom-file-input">
+                <input
+                  type="file"
+                  :ref="'afterFileInput_' + header.id + '_0'"
+                  @change="handleAfterFileChange($event, header, 0)"
+                  style="display: none;"
+                  multiple
+                />
+                <input
+                  type="text"
+                  :value="getManpowerRecord(header, 0).afterFileNames.join(', ')"
+                  readonly
+                  placeholder="No files chosen"
+                  @click="triggerAfterFileInput(header, 0)"
+                />
+              </div>
+            </td>
+          </tr>
+          <!-- Otherwise, render a row for each subDescription -->
+          <tr
+            v-for="(desc, index) in getSubDescriptions(header)"
+            :key="header.id + '-mp-' + index"
+          >
+            <td></td>
+            <td>
+              <input
+                type="text"
+                v-model="getManpowerRecord(header, index).manpowerDesignation"
+                placeholder="Enter designation"
+              />
+            </td>
+            <td>
+              <input
+                type="number"
+                v-model.number="getManpowerRecord(header, index).noOfManpower"
+                placeholder="Enter number"
+              />
+            </td>
+            <td>
+              <input
+                type="text"
+                v-model="getManpowerRecord(header, index).nameOfPersonel"
+                placeholder="Enter personnel name"
+              />
+            </td>
+            <td colspan="3">
+              <span>{{ desc }}</span>
+            </td>
+            <td>
+              <div class="custom-file-input">
+                <input
+                  type="file"
+                  :ref="'beforeFileInput_' + header.id + '_' + index"
+                  @change="handleBeforeFileChange($event, header, index)"
+                  style="display: none;"
+                  multiple
+                />
+                <input
+                  type="text"
+                  :value="getManpowerRecord(header, index).beforeFileNames.join(', ')"
+                  readonly
+                  placeholder="No files chosen"
+                  @click="triggerBeforeFileInput(header, index)"
+                />
+              </div>
+            </td>
+            <td>
+              <div class="custom-file-input">
+                <input
+                  type="file"
+                  :ref="'afterFileInput_' + header.id + '_' + index"
+                  @change="handleAfterFileChange($event, header, index)"
+                  style="display: none;"
+                  multiple
+                />
+                <input
+                  type="text"
+                  :value="getManpowerRecord(header, index).afterFileNames.join(', ')"
+                  readonly
+                  placeholder="No files chosen"
+                  @click="triggerAfterFileInput(header, index)"
+                />
+              </div>
+            </td>
+          </tr>
+        </template>
+      </tbody>
     </table>
     <!-- Global Submit Buttons -->
     <div class="text-center my-3">
@@ -229,9 +299,9 @@ export default {
             return {
               ...header,
               problemEncountered: header.problemEncountered || '',
-              manpowerDesignation: '',
-              noOfManpower: null,
-              nameOfPersonel: '',
+              // initialize manpowerRecords as an empty array for multiple rows
+              manpowerRecords: [],
+              // old header-level fields are no longer used
               beforeUploadedFiles: [],
               afterUploadedFiles: [],
               beforeFileNames: [],
@@ -285,6 +355,35 @@ export default {
         })
         .filter(text => text !== '');
       return activities.join(', ');
+    },
+    // New function to get only subDescriptions
+    getSubDescriptions(header) {
+      if (!header.items || !header.project_item_modifieds) return [];
+      return header.project_item_modifieds
+        .filter(mod => Number(mod.P_EnteredQuantity) > 0)
+        .map(mod => {
+          const matchingItem = header.items.find(item => item.itemno === mod.itemno);
+          return matchingItem && matchingItem.subDescription ? matchingItem.subDescription : '';
+        })
+        .filter(sub => sub !== '');
+    },
+    // Ensures each header has an array of manpower records and returns the record at index
+    getManpowerRecord(header, index) {
+      if (!header.manpowerRecords) {
+        this.$set(header, 'manpowerRecords', []);
+      }
+      if (!header.manpowerRecords[index]) {
+        this.$set(header.manpowerRecords, index, {
+          manpowerDesignation: '',
+          noOfManpower: null,
+          nameOfPersonel: '',
+          beforeUploadedFiles: [],
+          afterUploadedFiles: [],
+          beforeFileNames: [],
+          afterFileNames: []
+        });
+      }
+      return header.manpowerRecords[index];
     },
     updateRemainingField() {
       if (this.isRemainingUpdated) {
@@ -345,16 +444,23 @@ export default {
         this.isSubmittingProblemUpdates = false;
       }
     },
-    triggerBeforeFileInput(header) {
-      this.$refs['beforeFileInput_' + header.id][0].click();
+    // Trigger file input for a specific header and record index
+    triggerBeforeFileInput(header, index) {
+      this.$refs['beforeFileInput_' + header.id + '_' + index][0].click();
     },
-    handleBeforeFileChange(event, header) {
+    triggerAfterFileInput(header, index) {
+      this.$refs['afterFileInput_' + header.id + '_' + index][0].click();
+    },
+    // Handle file changes for a specific record (Before Images)
+    handleBeforeFileChange(event, header, index) {
       const files = Array.from(event.target.files);
       if (!files.length) return;
-      header.beforeFileNames = files.map(file => file.name);
-      this.uploadBeforeImages(files, header);
+      let record = this.getManpowerRecord(header, index);
+      record.beforeFileNames = files.map(file => file.name);
+      this.uploadBeforeImages(files, record);
     },
-    uploadBeforeImages(files, header) {
+    // Upload before images for a given record
+    uploadBeforeImages(files, record) {
       const uploadPromises = files.map(file => {
         const formData = new FormData();
         formData.append('files', file);
@@ -366,7 +472,7 @@ export default {
         .then(responses => {
           responses.forEach(response => {
             console.log('Before image uploaded:', response.data);
-            header.beforeUploadedFiles.push(...response.data);
+            record.beforeUploadedFiles.push(...response.data);
           });
         })
         .catch(error => {
@@ -374,16 +480,16 @@ export default {
           alert('Error uploading before images.');
         });
     },
-    triggerAfterFileInput(header) {
-      this.$refs['afterFileInput_' + header.id][0].click();
-    },
-    handleAfterFileChange(event, header) {
+    // Handle file changes for a specific record (After Images)
+    handleAfterFileChange(event, header, index) {
       const files = Array.from(event.target.files);
       if (!files.length) return;
-      header.afterFileNames = files.map(file => file.name);
-      this.uploadAfterImages(files, header);
+      let record = this.getManpowerRecord(header, index);
+      record.afterFileNames = files.map(file => file.name);
+      this.uploadAfterImages(files, record);
     },
-    uploadAfterImages(files, header) {
+    // Upload after images for a given record
+    uploadAfterImages(files, record) {
       const uploadPromises = files.map(file => {
         const formData = new FormData();
         formData.append('files', file);
@@ -395,7 +501,7 @@ export default {
         .then(responses => {
           responses.forEach(response => {
             console.log('After image uploaded:', response.data);
-            header.afterUploadedFiles.push(...response.data);
+            record.afterUploadedFiles.push(...response.data);
           });
         })
         .catch(error => {
@@ -407,56 +513,57 @@ export default {
       if (this.isSubmittingManpowerProgress) return;
       this.isSubmittingManpowerProgress = true;
       try {
-        const submitPromises = this.headerSections.map(header => {
-          const payload = {
-            data: {
-              manpower_designation: header.manpowerDesignation,
-              no_of_manpower: header.noOfManpower,
-              name_of_personel: header.nameOfPersonel,
-              project: this.project.id,
-              before_image: header.beforeUploadedFiles.length
-                ? header.beforeUploadedFiles.map(file => file.id)
-                : [],
-              after_image: header.afterUploadedFiles.length
-                ? header.afterUploadedFiles.map(file => file.id)
-                : []
-            }
-          };
-          return axios.post('http://localhost:1337/api/manpower-progresses', payload)
-            .then(() => {
-              if (header.project_item_modifieds && header.project_item_modifieds.length) {
-                const updatePromises = header.project_item_modifieds.map(mod => {
-                  // Use documentId here instead of mod.id
-                  return axios.put(`http://localhost:1337/api/project-item-modifieds/${mod.documentId}`, {
-                    data: {
-                      manpower_designation: header.manpowerDesignation,
-                      no_of_manpower: header.noOfManpower,
-                      name_of_personel: header.nameOfPersonel,
-                      before_image: header.beforeUploadedFiles.length
-                        ? header.beforeUploadedFiles.map(file => file.id)
-                        : [],
-                      after_image: header.afterUploadedFiles.length
-                        ? header.afterUploadedFiles.map(file => file.id)
-                        : []
-                    }
-                  });
-                });
-                return Promise.all(updatePromises);
+        const submitPromises = [];
+        this.headerSections.forEach(header => {
+          // If no records were added, use the fallback (index 0)
+          const records = header.manpowerRecords && header.manpowerRecords.length > 0
+            ? header.manpowerRecords
+            : [this.getManpowerRecord(header, 0)];
+          records.forEach((record, index) => {
+            const payload = {
+              data: {
+                manpower_designation: record.manpowerDesignation,
+                no_of_manpower: record.noOfManpower,
+                name_of_personel: record.nameOfPersonel,
+                project: this.project.id,
+                before_image: record.beforeUploadedFiles.length
+                  ? record.beforeUploadedFiles.map(file => file.id)
+                  : [],
+                after_image: record.afterUploadedFiles.length
+                  ? record.afterUploadedFiles.map(file => file.id)
+                  : []
               }
-              return Promise.resolve();
-            });
+            };
+            submitPromises.push(
+              axios.post('http://localhost:1337/api/manpower-progresses', payload)
+                .then(() => {
+                  // If project_item_modifieds exist, update the corresponding one
+                  if (header.project_item_modifieds && header.project_item_modifieds[index]) {
+                    return axios.put(`http://localhost:1337/api/project-item-modifieds/${header.project_item_modifieds[index].documentId}`, {
+                      data: {
+                        manpower_designation: record.manpowerDesignation,
+                        no_of_manpower: record.noOfManpower,
+                        name_of_personel: record.nameOfPersonel,
+                        before_image: record.beforeUploadedFiles.length
+                          ? record.beforeUploadedFiles.map(file => file.id)
+                          : [],
+                        after_image: record.afterUploadedFiles.length
+                          ? record.afterUploadedFiles.map(file => file.id)
+                          : []
+                      }
+                    });
+                  }
+                  return Promise.resolve();
+                })
+            );
+          });
         });
         await Promise.all(submitPromises);
         console.log('Manpower progress and project item modifieds updated successfully.');
         alert("Manpower progress submitted and project item modifieds updated successfully!");
+        // Reset the manpower records for each header
         this.headerSections.forEach(header => {
-          header.manpowerDesignation = '';
-          header.noOfManpower = null;
-          header.nameOfPersonel = '';
-          header.beforeUploadedFiles = [];
-          header.afterUploadedFiles = [];
-          header.beforeFileNames = [];
-          header.afterFileNames = [];
+          header.manpowerRecords = [];
         });
       } catch (error) {
         console.error("Error submitting manpower progress:", error);
