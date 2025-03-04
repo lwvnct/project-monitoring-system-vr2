@@ -4,8 +4,15 @@
     <button @click="downloadPDF" class="download-btn">
       Download as PDF
     </button>
-    <table class="progress-table mx-auto my-5">
-      <!-- Project Header Section -->
+    <table class="progress-table mx-auto my-5 pdf-table">
+      <!-- New thead for the image -->
+      <thead>
+        <tr>
+          <th colspan="13">
+            <img src="@/assets/h0.png" alt="Header Image" class="header-image">
+          </th>
+        </tr>
+      </thead>
       <thead>
         <tr>
           <th colspan="13" class="bgcolor table-title py-3">
@@ -494,5 +501,18 @@ img {
   padding: 10px;
   border-radius: 5px;
   color: white;
+}
+
+.header-image {
+  width: 100%;
+  height: auto;
+}
+
+.pdf-table {
+  border: 1px solid #ddd; /* Lighter border for PDF */
+}
+.pdf-table th,
+.pdf-table td {
+  border: 1px solid #ddd; /* Lighter border for PDF */
 }
 </style>

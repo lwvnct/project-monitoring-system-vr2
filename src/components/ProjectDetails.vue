@@ -8,7 +8,15 @@
     <button @click="downloadPDF" class="download-btn">
       Download as PDF
     </button>
-    <table ref="pdfTable" border="1" class="mx-auto my-5">
+    <table ref="pdfTable" border="1" class="mx-auto my-5 pdf-table">
+      <!-- New thead for the image -->
+      <thead>
+        <tr>
+          <th colspan="14">
+            <img src="@/assets/h0.png" alt="Header Image" class="header-image">
+          </th>
+        </tr>
+      </thead>
       <thead>
         <tr>
           <th colspan="14" class="table-header">Project Details</th>
@@ -399,5 +407,16 @@ table {
   padding: 10px;
   border-radius: 5px;
   color: white;
+}
+.pdf-table {
+  border: 1px solid #ddd; /* Lighter border for PDF */
+}
+.pdf-table th,
+.pdf-table td {
+  border: 1px solid #ddd; /* Lighter border for PDF */
+}
+.header-image {
+  width: 100%;
+  height: auto;
 }
 </style>
