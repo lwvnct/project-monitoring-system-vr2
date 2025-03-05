@@ -245,35 +245,35 @@ export default {
         section.project_item_modifieds = this.projectItemModifieds.filter(mod => {
           return mod.header_per_project_section && mod.header_per_project_section.id === section.id;
         });
-        section.items.forEach(item => {
-          const modItem = section.project_item_modifieds.find(mod => mod.itemno === item.itemno);
-          if (modItem) {
-            const computedTotalAmount =
-              parseFloat(modItem.P_EnteredQuantity || 0) * parseFloat(item.unitCost || 0);
-            modItem.totalAmount = computedTotalAmount;
-            const originalAmount = parseFloat(modItem.amount) || 0;
-            const newModifiedAmount = originalAmount - computedTotalAmount;
-            modItem.amount = newModifiedAmount;
-            axios
-              .put(`http://localhost:1337/api/project-item-modifieds/${modItem.documentId}`, {
-                data: {
-                  totalAmount: computedTotalAmount,
-                  amount: newModifiedAmount
-                }
-              })
-              .then(() => {
-                console.log(
-                  `Updated modified item ${modItem.id} with totalAmount ${computedTotalAmount} and new amount ${newModifiedAmount}`
-                );
-              })
-              .catch(error => {
-                console.error(
-                  `Error updating modified item ${modItem.id}`,
-                  error
-                );
-              });
-          }
-        });
+        // section.items.forEach(item => {
+        //   const modItem = section.project_item_modifieds.find(mod => mod.itemno === item.itemno);
+          //if (modItem) {
+          //   const computedTotalAmount =
+          //     parseFloat(modItem.P_EnteredQuantity || 0) * parseFloat(item.unitCost || 0);
+          //   modItem.totalAmount = computedTotalAmount;
+          //   const originalAmount = parseFloat(modItem.amount) || 0;
+          //   const newModifiedAmount = originalAmount - computedTotalAmount;
+          //   modItem.amount = newModifiedAmount;
+          //   axios
+          //     .put(`http://localhost:1337/api/project-item-modifieds/${modItem.documentId}`, {
+          //       data: {
+          //         totalAmount: computedTotalAmount,
+          //         amount: newModifiedAmount
+          //       }
+          //     })
+          //     .then(() => {
+          //       console.log(
+          //         `Updated modified item ${modItem.id} with totalAmount ${computedTotalAmount} and new amount ${newModifiedAmount}`
+          //       );
+          //     })
+          //     .catch(error => {
+          //       console.error(
+          //         `Error updating modified item ${modItem.id}`,
+          //         error
+          //       );
+          //     });
+          // }
+        // });
       });
     },
     formatDecimal(value) {
