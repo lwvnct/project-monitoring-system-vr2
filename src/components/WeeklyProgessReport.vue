@@ -78,7 +78,7 @@
           <td class="wt-percent">
             {{
               computeTotals(header).totalWTPercent !== null
-                ? computeTotals(header).totalWTPercent
+                ? formatToTwoDecimalPlaces(computeTotals(header).totalWTPercent)
                 : 'N/A'
             }}%
           </td>
@@ -87,12 +87,12 @@
           <td class="prev-wt-percent">
             {{
               computeTotals(header).totalPrevWTPercents !== null
-                ? computeTotals(header).totalPrevWTPercents
+                ? formatToTwoDecimalPlaces(computeTotals(header).totalPrevWTPercents)
                 : 'N/A'
             }}%
           </td>
           <td class="remaining-percent">
-            {{ header.remaining || 'Loading...' }}
+            {{ formatToTwoDecimalPlaces(header.remaining || 0) }}%
           </td>
           <td class="problem-cell">
             <textarea
@@ -484,6 +484,9 @@ export default {
       } finally {
         this.isSubmittingManpowerProgress = false;
       }
+    },
+    formatToTwoDecimalPlaces(value) {
+      return (Math.floor(value * 100) / 100).toFixed(2);
     }
   }
 };

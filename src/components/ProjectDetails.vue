@@ -1,7 +1,7 @@
 <template>
   <div>
     <button @click="redirectToViewWeeklyProgressReport" class="redirect-btn">
-      View Detailed Weekly Progress Report
+      View Weekly Progress Report
     </button>
     <!-- <button class="red-btn" onclick="window.print()">Print this page</button> -->
     <!-- New Download button -->
@@ -66,18 +66,17 @@
             {{ section.header_per_project_section }}
           </td>
         </tr>
-        <!-- Display the progress bar for the section using sum_wt_percent -->
+        <!-- Display the progress bar for the section using computed progress percentage -->
         <tr>
           <td colspan="14">
             <v-progress-linear
-              :value="getSumWtPercent(section)"
-              :max="getSectionTotalWt(section)"
-              :color="getProgressColor(getSumWtPercent(section))"
+              :value="getProgressPercentage(section)"
+              :color="getProgressColor(getSumWtPercent(section), getSectionTotalWt(section))"
               height="20"
               striped
             >
               <template v-slot:default>
-                <strong>{{ getSumWtPercent(section) }}/{{ getSectionTotalWt(section) }}</strong>
+                <strong>{{ formatDecimal(getSumWtPercent(section)) }}/{{ formatDecimal(getSectionTotalWt(section)) }}</strong>
               </template>
             </v-progress-linear>
           </td>
@@ -90,39 +89,39 @@
         <tr v-for="item in section.items" :key="'item-' + item.id">
           <td>{{ item.itemno }}</td>
           <td>{{ item.subDescription }}</td>
-          <td>{{ formatDecimal(item.quantity) }}</td>
+          <td>{{ formatNumber(item.quantity) }}</td>
           <td>{{ item.unit }}</td>
-          <td>{{ formatDecimal(item.unitCost) }}</td>
-          <td>{{ formatDecimal(item.amount) }}</td>
-          <td>{{ formatDecimal(item.wt_percent) }}</td>
+          <td>{{ formatNumber(item.unitCost) }}</td>
+          <td>{{ formatNumber(item.amount) }}</td>
+          <td>{{ formatNumber(item.wt_percent) }}</td>
           <!-- Previous QTY from P_EnteredQuantity -->
-          <td>{{ formatDecimal(getPreviousQty(section.id, item.itemno)) }}</td>
+          <td>{{ formatNumber(getPreviousQty(section.id, item.itemno)) }}</td>
           <!-- Previous AMOUNT as previous qty * unit cost -->
-          <td>{{ formatDecimal(calculatePreviousAmount(section.id, item)) }}</td>
+          <td>{{ formatNumber(calculatePreviousAmount(section.id, item)) }}</td>
           <!-- REMAINING QUANTITY from project_item_modifieds -->
-          <td>{{ formatDecimal(getModifiedQuantity(section.id, item.itemno)) }}</td>
+          <td>{{ formatNumber(getModifiedQuantity(section.id, item.itemno)) }}</td>
           <!-- TOTAL AMOUNT computed as P_EnteredQuantity * unitCost -->
-          <td>{{ formatDecimal(getTotalAmount(section.id, item.itemno)) }}</td>
+          <td>{{ formatNumber(getTotalAmount(section.id, item.itemno)) }}</td>
           <!-- BALANCE displays the updated "amount" from project_item_modifieds -->
-          <td>{{ formatDecimal(getModifiedAmount(section.id, item.itemno)) }}</td>
+          <td>{{ formatNumber(getModifiedAmount(section.id, item.itemno)) }}</td>
           <!-- PREV PERCENTAGE displays the value of P_EnteredQuantity -->
-          <td>{{ formatDecimal(getPreviousPercentage(section.id, item.itemno)) }}</td>
-          <td>{{ formatDecimal(getPreviousPercentage(section.id, item.itemno)) }}</td>
+          <td>{{ formatNumber(getPreviousPercentage(section.id, item.itemno)) }}%</td>
+          <td>{{ formatNumber(getPreviousPercentage(section.id, item.itemno)) }}%</td>
         </tr>
       </tbody>
       <!-- TOTAL Row -->
       <tfoot>
         <tr class="font-weight-bold bg-light">
           <td colspan="5">TOTAL</td>
-          <td>{{ formatDecimal(totalAmount) }}</td>
-          <td>{{ formatDecimal(totalWtPercent) }}</td>
+          <td>{{ formatNumber(totalAmount) }}</td>
+          <td>{{ formatNumber(totalWtPercent) }}</td>
           <td></td>
-          <td>{{ formatDecimal(totalPreviousAmount) }}</td>
+          <td>{{ formatNumber(totalPreviousAmount) }}</td>
           <td></td>
-          <td>{{ formatDecimal(totalTotalAmount) }}</td>
+          <td>{{ formatNumber(totalTotalAmount) }}</td>
           <td></td>
-          <td>{{ formatDecimal(totalPrevPercentage) }}</td>
-          <td>{{ formatDecimal(totalPrevPercentage) }}</td>
+          <td>{{ formatNumber(totalPrevPercentage) }}%</td>
+          <td>{{ formatNumber(totalPrevPercentage) }}%</td>
         </tr>
       </tfoot>
     </table>
@@ -230,7 +229,7 @@ export default {
       const modifiedItem = section.project_item_modifieds.find(
         modItem => modItem.itemno === itemno
       );
-      return modifiedItem ? parseFloat(modifiedItem.P_EnteredQuantity) || 0 : 0;
+      return modifiedItem ? parseFloat(modifiedItem.p_wt_percent) || 0 : 0;
     },
     getTotalAmount(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
@@ -245,43 +244,15 @@ export default {
         section.project_item_modifieds = this.projectItemModifieds.filter(mod => {
           return mod.header_per_project_section && mod.header_per_project_section.id === section.id;
         });
-        // section.items.forEach(item => {
-        //   const modItem = section.project_item_modifieds.find(mod => mod.itemno === item.itemno);
-          //if (modItem) {
-          //   const computedTotalAmount =
-          //     parseFloat(modItem.P_EnteredQuantity || 0) * parseFloat(item.unitCost || 0);
-          //   modItem.totalAmount = computedTotalAmount;
-          //   const originalAmount = parseFloat(modItem.amount) || 0;
-          //   const newModifiedAmount = originalAmount - computedTotalAmount;
-          //   modItem.amount = newModifiedAmount;
-          //   axios
-          //     .put(`http://localhost:1337/api/project-item-modifieds/${modItem.documentId}`, {
-          //       data: {
-          //         totalAmount: computedTotalAmount,
-          //         amount: newModifiedAmount
-          //       }
-          //     })
-          //     .then(() => {
-          //       console.log(
-          //         `Updated modified item ${modItem.id} with totalAmount ${computedTotalAmount} and new amount ${newModifiedAmount}`
-          //       );
-          //     })
-          //     .catch(error => {
-          //       console.error(
-          //         `Error updating modified item ${modItem.id}`,
-          //         error
-          //       );
-          //     });
-          // }
-        // });
       });
     },
     formatDecimal(value) {
       if (value === null || value === undefined || isNaN(value)) return '0.00';
-      return parseFloat(value).toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      });
+      return parseFloat(value).toFixed(2);
+    },
+    formatNumber(value) {
+      if (value === null || value === undefined || isNaN(value)) return '0.00';
+      return parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     },
     redirectToViewWeeklyProgressReport() {
       const documentId = this.$route.params.documentId;
@@ -303,10 +274,17 @@ export default {
       }
       return 0;
     },
-    getProgressColor(progress) {
-      if (progress < 30) return 'red';
-      if (progress < 70) return 'orange';
+    getProgressColor(progress, total) {
+      if (progress >= total) return 'green';
+      if (progress < total * 0.3) return 'red';
+      if (progress < total * 0.7) return 'orange';
       return 'green';
+    },
+    // New method: compute progress percentage for the progress bar.
+    getProgressPercentage(section) {
+      const total = this.getSectionTotalWt(section);
+      if (total === 0) return 0;
+      return (this.getSumWtPercent(section) / total) * 100;
     },
     // New method: capture the table, reserve a header space for timestamp, and generate a PDF.
     downloadPDF() {

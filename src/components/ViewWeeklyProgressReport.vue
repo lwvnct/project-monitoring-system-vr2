@@ -16,7 +16,7 @@
       <thead>
         <tr>
           <th colspan="13" class="bgcolor table-title py-3">
-            PROGRESS REPORT
+            VIEW PROGRESS REPORT
           </th>
         </tr>
         <tr>
@@ -88,7 +88,7 @@
           <td class="wt-percent">
             {{
               computeTotals(header).totalWTPercent !== null
-                ? computeTotals(header).totalWTPercent
+                ? formatToTwoDecimalPlaces(computeTotals(header).totalWTPercent)
                 : 'N/A'
             }}%
           </td>
@@ -97,12 +97,12 @@
           <td class="prev-wt-percent">
             {{
               computeTotals(header).totalPrevWTPercents !== null
-                ? computeTotals(header).totalPrevWTPercents
+                ? formatToTwoDecimalPlaces(computeTotals(header).totalPrevWTPercents)
                 : 'N/A'
             }}%
           </td>
           <td class="remaining-percent">
-            {{ header.remaining || '--' }}
+            {{ formatToTwoDecimalPlaces(header.remaining || 0) }}%
           </td>
           <td class="problem-cell">
             {{ header.problem_encountered || 'No Problem Encountered' }}
@@ -116,18 +116,22 @@
           <td colspan="3" class="table-title">Total</td>
           <td class="wt-percent">
             {{
-              headerSections.reduce((acc, header) => acc + computeTotals(header).totalWTPercent, 0)
+              formatToTwoDecimalPlaces(
+                headerSections.reduce((acc, header) => acc + computeTotals(header).totalWTPercent, 0)
+              )
             }}%
           </td>
           <td></td>
           <td></td>
           <td class="prev-wt-percent">
             {{
-              headerSections.reduce((acc, header) => acc + computeTotals(header).totalPrevWTPercents, 0)
+              formatToTwoDecimalPlaces(
+                headerSections.reduce((acc, header) => acc + computeTotals(header).totalPrevWTPercents, 0)
+              )
             }}%
           </td>
           <td class="remaining-percent">
-            {{ totalRemainingPercent }}
+            {{ formatToTwoDecimalPlaces(totalRemainingPercent) }}%
           </td>
           <td></td>
         </tr>
@@ -410,6 +414,9 @@ export default {
       if (!dateStr) return '';
       const date = new Date(dateStr);
       return date.toLocaleString();
+    },
+    formatToTwoDecimalPlaces(value) {
+      return (Math.floor(value * 100) / 100).toFixed(2);
     }
   }
 };

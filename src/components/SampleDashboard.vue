@@ -7,11 +7,10 @@
           v-model="search"
           label="Search projects"
           prepend-icon="mdi-magnify"
-          clearable
           outlined
           dense
           hide-details
-          style="background-color: white; border-radius: 4px;"
+          style="background-color: white;"
         ></v-text-field>
       </v-col>
     </v-row>
