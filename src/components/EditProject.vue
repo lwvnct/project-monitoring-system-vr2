@@ -448,10 +448,11 @@ export default {
       const newRow = this.newRowData[sectionId];
       const section = this.sections.find(sec => sec.id === sectionId);
       if (section && newRow) {
-        // Update header record by adding new row
+        // Update header record by adding new row (if allowed)
         section.items.push({ ...newRow });
         axios.put(`http://localhost:1337/api/header-per-project-sections/${section.documentId}`, {
           data: {
+            // Optionally update header fields if needed
             items: section.items
           }
         })
@@ -475,9 +476,10 @@ export default {
           .then(response2 => {
             alert('Project item created successfully');
             console.log("Project item created", response2);
-            // Assign returned documentId to the new row for future updates
+            // Assign returned documentId and unique id to the new row for future updates
             if(response2.data && response2.data.data) {
               newRow.documentId = response2.data.data.documentId;
+              newRow.id = response2.data.data.id;
             }
             this.$delete(this.newRowData, sectionId);
           })
@@ -509,47 +511,35 @@ export default {
     saveEdit(sectionId, itemno) {
       const key = this.editKey(sectionId, itemno);
       const editedItem = this.editingRowData[key];
-      const section = this.sections.find(sec => sec.id === sectionId);
-      if (section) {
-        const index = section.items.findIndex(it => it.itemno === itemno);
-        if (index !== -1) {
-          section.items.splice(index, 1, editedItem);
-          // Update header record first
-          axios.put(`http://localhost:1337/api/header-per-project-sections/${section.documentId}`, {
-            data: {
-              items: section.items
+      // Directly update the project item using the project-items endpoint
+      if (editedItem.id) {
+        axios.put(`http://localhost:1337/api/project-items/${editedItem.documentId}?populate=*`, {
+          data: {
+            itemno: editedItem.itemno,
+            subDescription: editedItem.subDescription,
+            quantity: editedItem.quantity,
+            unit: editedItem.unit,
+            unitCost: editedItem.unitCost,
+            amount: editedItem.amount,
+            wt_percent: editedItem.wt_percent
+          }
+        })
+        .then(response2 => {
+          alert('Project item updated successfully');
+          console.log('Project item updated successfully', response2);
+          // Update the local section data if needed
+          const section = this.sections.find(sec => sec.id === sectionId);
+          if (section) {
+            const index = section.items.findIndex(it => it.itemno === itemno);
+            if (index !== -1) {
+              section.items.splice(index, 1, editedItem);
             }
-          })
-          .then(response => {
-            alert('Row updated successfully in header');
-            console.log('Row updated in header', response);
-            // Then update corresponding project item if documentId exists
-            if (editedItem.documentId) {
-              axios.put(`http://localhost:1337/api/project-items/${editedItem.documentId}`, {
-                data: {
-                  itemno: editedItem.itemno,
-                  subDescription: editedItem.subDescription,
-                  quantity: editedItem.quantity,
-                  unit: editedItem.unit,
-                  unitCost: editedItem.unitCost,
-                  amount: editedItem.amount,
-                  wt_percent: editedItem.wt_percent
-                }
-              })
-              .then(response2 => {
-                console.log("Project item updated successfully", response2);
-              })
-              .catch(error2 => {
-                console.error("Error updating project item", error2);
-                alert("Error updating project item");
-              });
-            }
-          })
-          .catch(error => {
-            console.error('Error updating row in header', error);
-            alert('Error updating row in header');
-          });
-        }
+          }
+        })
+        .catch(error2 => {
+          console.error("Error updating project item", error2);
+          alert("Error updating project item");
+        });
       }
       this.$delete(this.editingRowData, key);
     },
