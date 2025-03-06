@@ -500,7 +500,7 @@ export default {
       const editedItem = this.editingRowData[key];
       // Directly update the project item using the project-items endpoint
       if (editedItem.id) {
-        axios.put(`http://localhost:1337/api/project-items/${editedItem.id}?populate=*`, {
+        axios.put(`http://localhost:1337/api/project-items/${editedItem.documentId}?populate=*`, {
           data: {
             itemno: editedItem.itemno,
             subDescription: editedItem.subDescription,
