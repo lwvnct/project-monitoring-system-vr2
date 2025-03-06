@@ -589,6 +589,28 @@ export default {
         console.error('Error deleting section', error);
         alert('Error deleting section');
       });
+    },
+    deleteRow(sectionId, itemno) {
+      const section = this.sections.find(sec => sec.id === sectionId);
+      if (!section) return;
+      const item = section.items.find(it => it.itemno === itemno);
+      if (!item) return;
+      if (!window.confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
+        return;
+      }
+      axios.delete(`http://localhost:1337/api/project-items/${item.documentId}`)
+      .then(response => {
+        alert('Item deleted successfully');
+        console.log('Item deleted successfully', response);
+        const index = section.items.findIndex(it => it.itemno === itemno);
+        if (index !== -1) {
+          section.items.splice(index, 1);
+        }
+      })
+      .catch(error => {
+        console.error('Error deleting item', error);
+        alert('Error deleting item');
+      });
     }
   },
   mounted() {
