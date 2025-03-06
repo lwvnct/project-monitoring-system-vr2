@@ -31,9 +31,22 @@
             {{ project.projectLocation }}
           </v-card-subtitle>
           <v-card-text>
-            <v-chip color="blue" text-color="white" small class="mb-2">
-              {{ project.projectName }}
-            </v-chip>
+            <div class="d-flex align-center mb-2">
+              <v-chip color="blue" text-color="white" small>
+                {{ project.projectName }}
+              </v-chip>
+              <!-- Edit Icon -->
+              <router-link :to="`/edit-project/${project.documentId}`" class="icon-button">
+                <v-btn icon small color="warning">
+                  <v-icon small>mdi-pencil</v-icon>
+                </v-btn>
+              </router-link>
+              <div class="vertical-line"></div>
+              <!-- Delete Icon -->
+              <v-btn icon small color="red" @click.stop="deleteProject(project)">
+                <v-icon small>mdi-delete</v-icon>
+              </v-btn>
+            </div>
             <v-list dense>
               <v-list-item>
                 <v-list-item-icon>
@@ -88,11 +101,6 @@
                 <v-icon>mdi-calendar-clock</v-icon>
               </v-btn>
             </router-link>
-
-            <!-- Delete Icon -->
-            <v-btn icon small color="red" @click.stop="deleteProject(project)">
-              <v-icon>mdi-delete</v-icon>
-            </v-btn>
           </v-card-actions>
         </v-card>
       </v-col>
@@ -297,5 +305,12 @@ export default {
   bottom: 20px;
   right: 20px;
   z-index: 100;
+}
+
+.vertical-line {
+  width: 1px;
+  height: 20px;
+  background-color: #bbbaba;
+  /* margin: 0 8px; */
 }
 </style>

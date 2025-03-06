@@ -8,6 +8,7 @@ import WorkAccomplished from '@/components/WorkAccomplished.vue';
 import WeeklyProgressReport from '@/components/WeeklyProgessReport.vue';
 import ViewWeeklyProgressReport from '@/components/ViewWeeklyProgressReport.vue';
 import LoginForm from '@/components/LoginForm.vue';
+import EditProject from '@/components/EditProject.vue';
 
 Vue.use(Router);
 
@@ -53,6 +54,11 @@ const router = new Router({
       path: '/view-weekly-progress/:documentId',
       name: 'ViewWeeklyProgressReport',
       component: ViewWeeklyProgressReport
+    },
+    {
+      path: '/edit-project/:documentId',
+      name: 'EditProject',
+      component: EditProject
     },
     // Add other routes as necessary
   ]
