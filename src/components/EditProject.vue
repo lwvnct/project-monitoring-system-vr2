@@ -448,49 +448,36 @@ export default {
       const newRow = this.newRowData[sectionId];
       const section = this.sections.find(sec => sec.id === sectionId);
       if (section && newRow) {
-        // Update header record by adding new row (if allowed)
-        section.items.push({ ...newRow });
-        axios.put(`http://localhost:1337/api/header-per-project-sections/${section.documentId}`, {
+        // Instead of updating the header record (which does not accept an "items" field),
+        // directly create the project item via the POST call.
+        axios.post("http://localhost:1337/api/project-items", {
           data: {
-            // Optionally update header fields if needed
-            items: section.items
+            itemno: newRow.itemno,
+            subDescription: newRow.subDescription,
+            quantity: newRow.quantity,
+            unit: newRow.unit,
+            unitCost: newRow.unitCost,
+            amount: newRow.amount,
+            wt_percent: newRow.wt_percent,
+            // Associate with the header record via its documentId
+            header_per_project_section: section.documentId
           }
         })
-        .then(response => {
-          alert('New row added successfully to header');
-          console.log('Header updated with new row', response);
-          // Now create a new project item record using POST
-          axios.post("http://localhost:1337/api/project-items", {
-            data: {
-              itemno: newRow.itemno,
-              subDescription: newRow.subDescription,
-              quantity: newRow.quantity,
-              unit: newRow.unit,
-              unitCost: newRow.unitCost,
-              amount: newRow.amount,
-              wt_percent: newRow.wt_percent,
-              // Associate with the header record via its documentId
-              header_per_project_section: section.documentId
-            }
-          })
-          .then(response2 => {
-            alert('Project item created successfully');
-            console.log("Project item created", response2);
-            // Assign returned documentId and unique id to the new row for future updates
-            if(response2.data && response2.data.data) {
-              newRow.documentId = response2.data.data.documentId;
-              newRow.id = response2.data.data.id;
-            }
-            this.$delete(this.newRowData, sectionId);
-          })
-          .catch(error2 => {
-            console.error("Error creating project item", error2);
-            alert("Error creating project item");
-          });
+        .then(response2 => {
+          alert('Project item created successfully');
+          console.log("Project item created", response2);
+          // Assign returned documentId and unique id to the new row for future updates
+          if(response2.data && response2.data.data) {
+            newRow.documentId = response2.data.data.documentId;
+            newRow.id = response2.data.data.id;
+          }
+          // Optionally update the local items array
+          section.items.push({ ...newRow });
+          this.$delete(this.newRowData, sectionId);
         })
-        .catch(error => {
-          console.error('Error adding new row', error);
-          alert('Error adding new row to header');
+        .catch(error2 => {
+          console.error("Error creating project item", error2);
+          alert("Error creating project item");
         });
       }
     },
@@ -513,7 +500,7 @@ export default {
       const editedItem = this.editingRowData[key];
       // Directly update the project item using the project-items endpoint
       if (editedItem.id) {
-        axios.put(`http://localhost:1337/api/project-items/${editedItem.documentId}?populate=*`, {
+        axios.put(`http://localhost:1337/api/project-items/${editedItem.id}?populate=*`, {
           data: {
             itemno: editedItem.itemno,
             subDescription: editedItem.subDescription,
