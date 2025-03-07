@@ -1,14 +1,9 @@
 <template>
   <div>
-    <div class="ps-15 mt-5 notification" @click="redirectToWeeklyProgressReport">
-      <p class="text-center">
-        Please CLICK here go to the Weekly Progress Report page BEFORE SUBMITTING data.(ONLY ONCE)
-      </p>
-    </div>
-    <table border="1" class="mx-auto ">
+    <table border="1" class="mx-auto mt-5">
       <thead>
         <tr>
-          <th colspan="16" class="table-header">WORK ACCOMPLISHED REPORT</th>
+          <th colspan="16" class="table-header">CREATE WORK ACCOMPLISHED REPORT</th>
         </tr>
         <tr>
           <th rowspan="2">ITEM NO.</th>
@@ -68,6 +63,7 @@
                 type="number"
                 min="0"
                 step="0.01"
+                @input="updateEnterPercentage(section.id, item)"
               />
             </td>
             <td>
@@ -367,9 +363,22 @@ export default {
       } finally {
         this.isSubmitting = false; // Reset submitting state
       }
+    },
+    updateEnterPercentage(sectionId, item) {
+      const section = this.sections.find(sec => sec.id === sectionId);
+      if (section && item.quantity) {
+        item.enterPercentage = (item.enterQty / item.quantity) * 100;
+      }
+    },
+    showAlert() {
+      const userConfirmed = confirm('Please click OK to go to the Weekly Progress Report page before submitting data (ONLY ONCE). Cancel if you already visited the page.');
+      if (userConfirmed) {
+        this.redirectToWeeklyProgressReport();
+      }
     }
   },
   mounted() {
+    this.showAlert();
     Promise.all([this.fetchData(), this.fetchProjectItemModifieds()])
       .catch(error => {
         console.error('Error in mounted hook:', error);
@@ -447,5 +456,25 @@ button:hover {
 
 p {
   color: white;
+}
+
+.alert-btn {
+  display: block;
+  width: 90%;
+  margin: 10px auto;
+  padding: 10px;
+  background-color: #f61616;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: center;
+  font-size: 16px;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.alert-btn:hover {
+  background-color: #d51414;
 }
 </style>

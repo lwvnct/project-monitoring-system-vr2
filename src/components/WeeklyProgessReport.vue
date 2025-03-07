@@ -5,7 +5,7 @@
       <thead>
         <tr>
           <th colspan="13" class="bgcolor table-title py-3">
-            WEEKLY PROGRESS REPORT
+            CREATE WEEKLY PROGRESS REPORT
           </th>
         </tr>
         <tr>

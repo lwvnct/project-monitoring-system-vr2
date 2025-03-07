@@ -145,6 +145,19 @@ export default {
       }
     },
 
+    resetProjectItem() {
+      this.projectItem = {
+        itemno: "",
+        subDescription: "",
+        quantity: null,
+        unit: "",
+        unitCost: null,
+        amount: null,
+        wt_percent: null,
+        header_per_project_section: this.sectionId,
+      };
+    },
+
     async submitProjectItem() {
       if (this.isSubmitting) return; // Prevent multiple submissions
       this.isSubmitting = true;
@@ -168,6 +181,7 @@ export default {
         await axios.post("http://localhost:1337/api/project-item-modifieds", itemDataForSecondAPI);
 
         alert("Project Item submitted successfully!");
+        this.resetProjectItem(); // Reset the form fields after successful submission
       } catch (error) {
         console.error("Error submitting project item:", error.response?.data || error);
         alert("Failed to submit project item.");

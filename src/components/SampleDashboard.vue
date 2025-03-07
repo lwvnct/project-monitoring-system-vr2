@@ -120,18 +120,19 @@
     <!-- Dialog displaying the average wt_percent -->
     <v-dialog v-model="dialog" max-width="400">
       <v-card>
-        <v-card-title class="headline">Average WT Percentage</v-card-title>
+        <v-card-title class="headline text-center ps-10 ms-9">Average WT Percentage</v-card-title> <!-- Centered the title -->
         <v-card-text class="text-center">
           <v-progress-circular
             :value="averageWtPercent"
             :rotate="360"
-            :size="120"
-            :width="15"
+            :size="200"
+            :width="30"
             :color="circularColor"
+            class="mx-auto mt-3"
           >
-            <span>{{ averageWtPercent }}%</span>
+            <span style="font-size: 24px;">{{ averageWtPercent }}%</span>
           </v-progress-circular>
-          <p class="mt-4">Total wt_percent divided by the number of projects</p>
+          <!-- <p class="mt-4">Total wt_percent divided by the number of projects</p> -->
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
