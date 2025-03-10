@@ -18,53 +18,61 @@
       </form>
     </div>
 
-  <!-- Second Form: Project Items -->
-      <div class="form-container">
-        <h2>Project Item Details</h2>
-        <form @submit.prevent="submitProjectItem">
-          <div v-if="!sectionId" class="alert">
-            <p><strong>Note:</strong> Please submit the Project Section first.</p>
+    <!-- Second Form: Project Items -->
+    <div class="form-container">
+      <h2>Project Item Details</h2>
+      <form @submit.prevent="submitProjectItem">
+        <div v-if="!sectionId" class="alert">
+          <p><strong>Note:</strong> Please submit the Project Section first.</p>
+        </div>
+
+        <div class="form-fields">
+          <div class="form-group">
+            <label for="itemno">Item Number</label>
+            <input v-model="projectItem.itemno" id="itemno" type="text" required :disabled="!sectionId" />
           </div>
-  
-          <div class="form-fields">
-            <div class="form-group">
-              <label for="itemno">Item Number</label>
-              <input v-model="projectItem.itemno" id="itemno" type="text" required :disabled="!sectionId" />
-            </div>
-  
-            <div class="form-group">
-              <label for="subDescription">Sub Description</label>
-              <input v-model="projectItem.subDescription" id="subDescription" type="text" required :disabled="!sectionId" />
-            </div>
-  
-            <div class="form-group">
-              <label for="quantity">Quantity</label>
-              <input v-model.number="projectItem.quantity" id="quantity" type="number" step="0.01" required :disabled="!sectionId" />
-            </div>
-  
-            <div class="form-group">
-              <label for="unit">Unit</label>
-              <input v-model="projectItem.unit" id="unit" type="text" required :disabled="!sectionId" />
-            </div>
-  
-            <div class="form-group">
-              <label for="unitCost">Unit Cost</label>
-              <input v-model.number="projectItem.unitCost" id="unitCost" type="number" step="0.01" required :disabled="!sectionId" />
-            </div>
-  
-            <div class="form-group">
-              <label for="amount">Amount</label>
-              <input v-model.number="projectItem.amount" id="amount" type="number" step="0.01" required :disabled="!sectionId" />
-            </div>
-  
-            <div class="form-group">
-              <label for="wtPercent">Weight Percent</label>
-              <input v-model.number="projectItem.wt_percent" id="wtPercent" type="number" step="0.01" required :disabled="!sectionId" />
-            </div>
+
+          <div class="form-group">
+            <label for="subDescription">Sub Description</label>
+            <input v-model="projectItem.subDescription" id="subDescription" type="text" required :disabled="!sectionId" />
           </div>
-  
-          <button type="submit" class="btn mt-5" id="orange" :disabled="!sectionId || isSubmitting || isProjectItemButtonDisabled" @focus="enableProjectItemButton">Submit Item</button>
+
+          <!-- Additional fields can be uncommented as needed -->
+        </div>
+
+        <button type="submit" class="btn mt-5" id="orange" :disabled="!sectionId || isSubmitting || isProjectItemButtonDisabled" @focus="enableProjectItemButton">Submit Item</button>
       </form>
+    </div>
+
+    <!-- Third Form: Material Details -->
+    <div v-if="showMaterialForm" class="modal">
+      <div class="modal-content">
+        <h2>Material Details</h2>
+        <form @submit.prevent="submitMaterial">
+          <div class="form-group">
+            <label for="material">Material</label>
+            <input v-model="materialData.material" id="material" type="text" required />
+          </div>
+
+          <div class="form-group">
+            <label for="materialQuantity">Quantity</label>
+            <input v-model.number="materialData.quantity" id="materialQuantity" type="number" step="0.01" required />
+          </div>
+
+          <div class="form-group">
+            <label for="materialUnit">Unit</label>
+            <input v-model="materialData.unit" id="materialUnit" type="text" required />
+          </div>
+
+          <div class="form-group">
+            <label for="materialPrice">Price</label>
+            <input v-model.number="materialData.price" id="materialPrice" type="number" step="0.01" required />
+          </div>
+
+          <button type="submit" class="btn mt-5" :disabled="isSubmitting">Submit Material</button>
+          <button type="button" class="btn mt-5" @click="done" :disabled="isSubmitting">Done</button>
+        </form>
+      </div>
     </div>
   </div>
 </template>
@@ -92,9 +100,18 @@ export default {
         wt_percent: null,
         header_per_project_section: null,
       },
-      sectionId: null, // To store the ID of the created Project Section
+      materialData: {
+        material: "",
+        quantity: null,
+        unit: "",
+        price: null,
+      },
+      sectionId: null, // ID of the created Project Section
+      projectItemId: null, // ID of the created Project Item
+      projectItemModifiedId: null, // ID of the created Project Item Modified
       isSubmitting: false, // To prevent multiple submissions
-      isProjectItemButtonDisabled: false, // To disable the Project Item button until the Project Section is submitted
+      isProjectItemButtonDisabled: false, // Disable the Project Item button until the section is submitted
+      showMaterialForm: false, // Control visibility of the third form
     };
   },
   created() {
@@ -119,7 +136,7 @@ export default {
       this.isProjectItemButtonDisabled = false;
     },
     async submitSection() {
-      if (this.isSubmitting) return; // Prevent multiple submissions
+      if (this.isSubmitting) return;
       this.isSubmitting = true;
       try {
         console.log("Submitting section with:", this.formData);
@@ -135,7 +152,7 @@ export default {
         this.sectionId = sectionResponse.data.data.id;
         this.projectItem.header_per_project_section = this.sectionId;
 
-        this.isProjectItemButtonDisabled = false; // Enable the button after successful submission
+        this.isProjectItemButtonDisabled = false;
         alert("Project Section submitted successfully!");
       } catch (error) {
         console.error("Error submitting section:", error.response?.data || error);
@@ -159,7 +176,7 @@ export default {
     },
 
     async submitProjectItem() {
-      if (this.isSubmitting) return; // Prevent multiple submissions
+      if (this.isSubmitting) return;
       this.isSubmitting = true;
       try {
         if (!this.sectionId) {
@@ -175,19 +192,93 @@ export default {
           },
         };
 
-        delete itemDataForSecondAPI.data.wt_percent; // Remove wt_percent for the second API
+        // Remove wt_percent for the second API
+        delete itemDataForSecondAPI.data.wt_percent;
 
-        await axios.post("http://localhost:1337/api/project-items", itemDataForFirstAPI);
-        await axios.post("http://localhost:1337/api/project-item-modifieds", itemDataForSecondAPI);
+        // Submit the project item and store its ID
+        const response = await axios.post("http://localhost:1337/api/project-items", itemDataForFirstAPI);
+        this.projectItemId = response.data.data.id;
+
+        // Submit to project-item-modifieds and capture the modified item ID for later use
+        const modifiedResponse = await axios.post("http://localhost:1337/api/project-item-modifieds", itemDataForSecondAPI);
+        this.projectItemModifiedId = modifiedResponse.data.data.id;
 
         alert("Project Item submitted successfully!");
-        this.resetProjectItem(); // Reset the form fields after successful submission
+        this.resetProjectItem();
+        this.showMaterialForm = true;
       } catch (error) {
         console.error("Error submitting project item:", error.response?.data || error);
         alert("Failed to submit project item.");
       } finally {
         this.isSubmitting = false;
       }
+    },
+
+    async submitMaterial() {
+      if (this.isSubmitting) return;
+      this.isSubmitting = true;
+      try {
+        console.log("Submitting material with:", this.materialData);
+
+        if (!this.projectItemId) {
+          alert("No project item found. Please submit a project item first.");
+          return;
+        }
+
+        // Link the material to the project item ID for the first API
+        const materialDataWithProjectItem = {
+          ...this.materialData,
+          project_item: this.projectItemId,
+        };
+
+        // Submit material to the original materials API
+        const materialResponse = await axios.post(
+          "http://localhost:1337/api/materials",
+          {
+            data: materialDataWithProjectItem,
+          }
+        );
+        console.log("Material created:", materialResponse.data);
+
+        // Prepare payload for material-modifieds using the project item modified ID and compute subtotal
+        const materialModifiedPayload = {
+          data: {
+            material: this.materialData.material,
+            quantity: this.materialData.quantity,
+            unit: this.materialData.unit,
+            price: this.materialData.price,
+            project_item_modified: this.projectItemModifiedId,
+            subtotal: this.materialData.quantity * this.materialData.price,
+          },
+        };
+
+        // Submit to material-modifieds API
+        const materialModifiedResponse = await axios.post(
+          "http://localhost:1337/api/material-modifieds",
+          materialModifiedPayload
+        );
+        console.log("Material modified created:", materialModifiedResponse.data);
+
+        alert("Material submitted successfully!");
+        this.resetMaterialData();
+      } catch (error) {
+        console.error("Error submitting material:", error.response?.data || error);
+        alert("Failed to submit material.");
+      } finally {
+        this.isSubmitting = false;
+      }
+    },
+    resetMaterialData() {
+      this.materialData = {
+        material: "",
+        quantity: null,
+        unit: "",
+        price: null,
+      };
+    },
+    done() {
+      this.showMaterialForm = false;
+      alert("You have completed the submission process.");
     },
   },
 };
@@ -262,7 +353,27 @@ input:disabled {
 }
 
 #orange {
-  background:rgb(255, 179, 1);
+  background: rgb(255, 179, 1);
   color: black;
+}
+
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  max-width: 500px;
+  width: 100%;
 }
 </style>
