@@ -36,8 +36,6 @@
             <label for="subDescription">Sub Description</label>
             <input v-model="projectItem.subDescription" id="subDescription" type="text" required :disabled="!sectionId" />
           </div>
-
-          <!-- Additional fields can be uncommented as needed -->
         </div>
 
         <button type="submit" class="btn mt-5" id="orange" :disabled="!sectionId || isSubmitting || isProjectItemButtonDisabled" @focus="enableProjectItemButton">Submit Item</button>
@@ -161,13 +159,13 @@ export default {
         ratePerDay: null,
       },
       newPerson: "",
-      sectionId: null, // ID of the created Project Section
-      projectItemId: null, // ID of the created Project Item
-      projectItemModifiedId: null, // ID of the created Project Item Modified
-      isSubmitting: false, // To prevent multiple submissions
-      isProjectItemButtonDisabled: false, // Disable the Project Item button until the section is submitted
-      showMaterialForm: false, // Control visibility of the third form
-      showLaborForm: false, // Control visibility of the labor form
+      sectionId: null,
+      projectItemId: null,
+      projectItemModifiedId: null,
+      isSubmitting: false,
+      isProjectItemButtonDisabled: false,
+      showMaterialForm: false,
+      showLaborForm: false,
     };
   },
   created() {
@@ -343,20 +341,22 @@ export default {
           return;
         }
 
-        // Link the labor to the project item ID
-        const laborDataWithProjectItem = {
-          ...this.laborData,
-          project_item: this.projectItemId,
+        // Construct the payload matching the sample data structure
+        const laborPayload = {
+          laborRequirments: this.laborData.laborRequirements, // note the key name to match the API sample
+          manpower: this.laborData.manpower,
+          days: this.laborData.days,
+          ratePerDay: this.laborData.ratePerDay,
+          project: this.formData.project, // using the project ID from formData
+          name: this.laborData.name.join(", ") // joining names into a comma-separated string
         };
 
-        // Submit labor to the API
+        // Submit labor data to the project-workers API
         const laborResponse = await axios.post(
-          "http://localhost:1337/api/labor-requirements",
-          {
-            data: laborDataWithProjectItem,
-          }
+          "http://localhost:1337/api/project-workers",
+          { data: laborPayload }
         );
-        console.log("Labor created:", laborResponse.data);
+        console.log("Labor submitted:", laborResponse.data);
 
         alert("Labor submitted successfully!");
         this.resetLaborData();
@@ -420,7 +420,7 @@ h2 {
   gap: 10px;
 }
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 label {
   display: block;
@@ -485,6 +485,11 @@ input:disabled {
   border-radius: 10px;
   max-width: 500px;
   width: 100%;
+}
+.scrollable-list {
+  max-height: 100px; /* Fixed height */
+  overflow-y: auto; /* Enable vertical scrolling */
+  margin-top: 10px;
 }
 .scrollable-list {
   max-height: 100px;
