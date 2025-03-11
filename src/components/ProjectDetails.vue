@@ -86,9 +86,13 @@
             {{ section.mainDescription }}
           </td>
         </tr>
+        <!-- Main item rows -->
         <tr v-for="item in section.items" :key="'item-' + item.id">
           <td>{{ item.itemno }}</td>
-          <td>{{ item.subDescription }}</td>
+          <!-- Added click event and cursor style for toggling material details -->
+          <td @click="toggleMaterialDetails(section.id, item.itemno)" style="cursor: pointer;">
+            {{ item.subDescription }}
+          </td>
           <td>{{ formatNumber(item.quantity) }}</td>
           <td>{{ item.unit }}</td>
           <td>{{ formatNumber(item.unitCost) }}</td>
@@ -107,6 +111,45 @@
           <!-- PREV PERCENTAGE displays the value of P_EnteredQuantity -->
           <td>{{ formatNumber(getPreviousPercentage(section.id, item.itemno)) }}%</td>
           <td>{{ formatNumber(getPreviousPercentage(section.id, item.itemno)) }}%</td>
+        </tr>
+        <!-- New row: Show material_modifieds details for expanded items -->
+        <tr
+          v-for="item in section.items.filter(i => expandedItems[`${section.id}-${i.itemno}`])"
+          :key="'material-details-' + item.id"
+        >
+          <td colspan="14">
+            <table class="material-table" border="1">
+              <thead>
+                <tr>
+                  <th>Material</th>
+                  <th>Quantity</th>
+                  <th>Unit</th>
+                  <th>Price</th>
+                  <th>Material Cost</th> <!-- New column header -->
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(material, index) in getMaterialModifieds(section.id, item.itemno)"
+                  :key="'material-' + index"
+                >
+                  <td>{{ material.material }}</td>
+                  <td>{{ material.quantity }}</td>
+                  <td>{{ material.unit }}</td>
+                  <td>{{ material.price }}</td>
+                  <td>{{ formatNumber(material.quantity * material.price) }}</td> <!-- New column content -->
+                </tr>
+                <tr v-if="getMaterialModifieds(section.id, item.itemno).length === 0">
+                  <td colspan="5">No materials available</td> <!-- Adjust colspan to 5 -->
+                </tr>
+                <!-- New row for sub-total -->
+                <tr>
+                  <td colspan="4" class="font-weight-bold">Sub-total</td>
+                  <td class="font-weight-bold">{{ formatNumber(getMaterialModifieds(section.id, item.itemno).reduce((sum, material) => sum + (material.quantity * material.price), 0)) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
         </tr>
       </tbody>
       <!-- TOTAL Row -->
@@ -138,7 +181,9 @@ export default {
   data() {
     return {
       sections: [],
-      projectItemModifieds: []
+      projectItemModifieds: [],
+      // New property to track expanded rows for material details
+      expandedItems: {}
     };
   },
   computed: {
@@ -194,6 +239,13 @@ export default {
         console.error('Error fetching project item modifieds:', error);
       }
     },
+    updateProjectItemModifiedAmounts() {
+      this.sections.forEach(section => {
+        section.project_item_modifieds = this.projectItemModifieds.filter(mod => {
+          return mod.header_per_project_section && mod.header_per_project_section.id === section.id;
+        });
+      });
+    },
     getPreviousQty(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
       if (!section || !section.project_item_modifieds) return 0;
@@ -239,12 +291,21 @@ export default {
       );
       return modifiedItem ? parseFloat(modifiedItem.totalAmount) || 0 : 0;
     },
-    updateProjectItemModifiedAmounts() {
-      this.sections.forEach(section => {
-        section.project_item_modifieds = this.projectItemModifieds.filter(mod => {
-          return mod.header_per_project_section && mod.header_per_project_section.id === section.id;
-        });
-      });
+    // New method to get material_modifieds for a specific item
+    getMaterialModifieds(sectionId, itemno) {
+      const section = this.sections.find(sec => sec.id === sectionId);
+      if (!section || !section.project_item_modifieds) return [];
+      const modifiedItem = section.project_item_modifieds.find(
+        modItem => modItem.itemno === itemno
+      );
+      return modifiedItem && modifiedItem.material_modifieds
+        ? modifiedItem.material_modifieds
+        : [];
+    },
+    // New method to toggle display of material details
+    toggleMaterialDetails(sectionId, itemno) {
+      const key = `${sectionId}-${itemno}`;
+      this.$set(this.expandedItems, key, !this.expandedItems[key]);
     },
     formatDecimal(value) {
       if (value === null || value === undefined || isNaN(value)) return '0.00';
@@ -396,5 +457,17 @@ table {
 .header-image {
   width: 100%;
   height: auto;
+}
+/* New styling for the nested material table */
+.material-table {
+  width: 100%;
+  margin-top: 5px;
+  border-collapse: collapse;
+}
+.material-table th,
+.material-table td {
+  padding: 4px;
+  border: 1px solid #ccc;
+  font-size: 14px;
 }
 </style>

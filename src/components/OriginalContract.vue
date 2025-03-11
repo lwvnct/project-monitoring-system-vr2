@@ -41,6 +41,7 @@
         </div>
 
         <button type="submit" class="btn mt-5" id="orange" :disabled="!sectionId || isSubmitting || isProjectItemButtonDisabled" @focus="enableProjectItemButton">Submit Item</button>
+        <button type="button" class="btn mt-5" @click="showLaborForm = true" :disabled="!sectionId">Add Labor Requirements</button>
       </form>
     </div>
 
@@ -71,6 +72,52 @@
 
           <button type="submit" class="btn mt-5" :disabled="isSubmitting">Submit Material</button>
           <button type="button" class="btn mt-5" @click="done" :disabled="isSubmitting">Done</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Labor Requirements Form -->
+    <div v-if="showLaborForm" class="modal">
+      <div class="modal-content">
+        <h2>Labor Requirements</h2>
+        <form @submit.prevent="submitLabor">
+          <div class="form-group">
+            <label for="laborRequirements">Labor Requirements</label>
+            <input v-model="laborData.laborRequirements" id="laborRequirements" type="text" required />
+          </div>
+
+          <div class="form-group">
+            <label for="name">Name</label>
+            <input v-model="newPerson" id="name" type="text" @keyup.enter="addPerson" />
+            <button type="button" @click="addPerson">Add Person</button>
+            <div class="scrollable-list">
+              <ul>
+                <li v-for="(person, index) in laborData.name" :key="index">
+                  {{ person }} <button type="button" @click="removePerson(index)">Remove</button>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="form-fields">
+            <div class="form-group">
+              <label for="manpower">Manpower</label>
+              <input v-model.number="laborData.manpower" id="manpower" type="number" required />
+            </div>
+
+            <div class="form-group">
+              <label for="days">Days</label>
+              <input v-model.number="laborData.days" id="days" type="number" required />
+            </div>
+
+            <div class="form-group">
+              <label for="ratePerDay">Rate/Day</label>
+              <input v-model.number="laborData.ratePerDay" id="ratePerDay" type="number" step="0.01" required />
+            </div>
+          </div>
+
+          <button type="submit" class="btn mt-5" :disabled="isSubmitting">Submit Labor</button>
+          <button type="button" class="btn mt-5" @click="showLaborForm = false" :disabled="isSubmitting">Cancel</button>
         </form>
       </div>
     </div>
@@ -106,12 +153,21 @@ export default {
         unit: "",
         price: null,
       },
+      laborData: {
+        laborRequirements: "",
+        name: [],
+        manpower: null,
+        days: null,
+        ratePerDay: null,
+      },
+      newPerson: "",
       sectionId: null, // ID of the created Project Section
       projectItemId: null, // ID of the created Project Item
       projectItemModifiedId: null, // ID of the created Project Item Modified
       isSubmitting: false, // To prevent multiple submissions
       isProjectItemButtonDisabled: false, // Disable the Project Item button until the section is submitted
       showMaterialForm: false, // Control visibility of the third form
+      showLaborForm: false, // Control visibility of the labor form
     };
   },
   created() {
@@ -276,6 +332,60 @@ export default {
         price: null,
       };
     },
+    async submitLabor() {
+      if (this.isSubmitting) return;
+      this.isSubmitting = true;
+      try {
+        console.log("Submitting labor with:", this.laborData);
+
+        if (!this.projectItemId) {
+          alert("No project item found. Please submit a project item first.");
+          return;
+        }
+
+        // Link the labor to the project item ID
+        const laborDataWithProjectItem = {
+          ...this.laborData,
+          project_item: this.projectItemId,
+        };
+
+        // Submit labor to the API
+        const laborResponse = await axios.post(
+          "http://localhost:1337/api/labor-requirements",
+          {
+            data: laborDataWithProjectItem,
+          }
+        );
+        console.log("Labor created:", laborResponse.data);
+
+        alert("Labor submitted successfully!");
+        this.resetLaborData();
+        this.showLaborForm = false;
+      } catch (error) {
+        console.error("Error submitting labor:", error.response?.data || error);
+        alert("Failed to submit labor.");
+      } finally {
+        this.isSubmitting = false;
+      }
+    },
+    resetLaborData() {
+      this.laborData = {
+        laborRequirements: "",
+        name: [],
+        manpower: null,
+        days: null,
+        ratePerDay: null,
+      };
+    },
+    addPerson() {
+      if (this.newPerson.trim() !== "") {
+        this.laborData.name.push(this.newPerson.trim());
+        this.newPerson = "";
+      }
+    },
+    removePerson(index) {
+      this.laborData.name.splice(index, 1);
+    },
     done() {
       this.showMaterialForm = false;
       alert("You have completed the submission process.");
@@ -305,12 +415,12 @@ h2 {
   margin-bottom: 20px;
 }
 .form-fields {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 5px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
 }
 .form-group {
-  margin-bottom: 5px;
+  margin-bottom: 15px;
 }
 label {
   display: block;
@@ -375,5 +485,20 @@ input:disabled {
   border-radius: 10px;
   max-width: 500px;
   width: 100%;
+}
+.scrollable-list {
+  max-height: 100px;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+.scrollable-list ul {
+  list-style-type: none;
+  padding: 0;
+}
+.scrollable-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
 }
 </style>
