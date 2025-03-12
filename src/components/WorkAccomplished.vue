@@ -129,6 +129,7 @@
                   <tr>
                     <th>Input</th>
                     <th>Material</th>
+                    <!-- Updated: now fetching quantity from the API’s “materials” array -->
                     <th>Quantity</th>
                     <th>Remaining</th>
                     <th>Unit</th>
@@ -151,11 +152,12 @@
                       />
                     </td>
                     <td>{{ material.material }}</td>
-                    <td>{{ material.quantity }}</td>
+                    <!-- Use the new helper method to get the quantity from "materials" -->
+                    <td>{{ getMaterialQuantityFromMaterials(section.id, item.itemno, index) }}</td>
                     <td>{{ material.remainingquantity }}</td>
                     <td>{{ material.unit }}</td>
                     <td>{{ material.price }}</td>
-                    <td>{{ formatNumber(material.quantity * material.price) }}</td>
+                    <td>{{ formatNumber(getMaterialQuantityFromMaterials(section.id, item.itemno, index) * material.price) }}</td>
                     <td>{{ material.remainingsubtotal }}</td>
                     <td>
                       <button @click="updateMaterial(material)">Update</button>
@@ -395,6 +397,16 @@ export default {
         }
       });
       return modifiedItem.material_modifieds;
+    },
+    // New helper method to get the quantity from the "materials" array in the API response
+    getMaterialQuantityFromMaterials(sectionId, itemno, index) {
+      const section = this.sections.find(sec => sec.id === sectionId);
+      if (!section || !section.project_item_modifieds) return 0;
+      const modifiedItem = section.project_item_modifieds.find(
+        modItem => modItem.itemno === itemno
+      );
+      if (!modifiedItem || !modifiedItem.materials) return 0;
+      return modifiedItem.materials[index] ? modifiedItem.materials[index].quantity : 0;
     },
     toggleMaterialDetails(sectionId, itemno) {
       const key = `${sectionId}-${itemno}`;
