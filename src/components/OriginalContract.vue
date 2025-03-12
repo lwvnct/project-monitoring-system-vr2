@@ -274,27 +274,29 @@ export default {
       try {
         console.log("Submitting material with:", this.materialData);
 
-        if (!this.projectItemId) {
-          alert("No project item found. Please submit a project item first.");
+        // Ensure that the project item modified ID is available for the relation
+        if (!this.projectItemModifiedId) {
+          alert("No project item modified found. Please submit a project item first.");
           return;
         }
 
-        // Link the material to the project item ID for the first API
-        const materialDataWithProjectItem = {
+        // Prepare the payload for the /materials endpoint using the correct relation field and computing subtotal
+        const materialDataPayload = {
           ...this.materialData,
-          project_item: this.projectItemId,
+          project_item_modified: this.projectItemModifiedId,
+          subtotal: this.materialData.quantity * this.materialData.price,
         };
 
-        // Submit material to the original materials API
+        // Submit material to the original materials API with the corrected payload
         const materialResponse = await axios.post(
           "http://localhost:1337/api/materials",
           {
-            data: materialDataWithProjectItem,
+            data: materialDataPayload,
           }
         );
         console.log("Material created:", materialResponse.data);
 
-        // Prepare payload for material-modifieds using the project item modified ID and compute subtotal
+        // Prepare payload for the material-modifieds API (unchanged as it already uses the correct relation field)
         const materialModifiedPayload = {
           data: {
             material: this.materialData.material,
@@ -306,7 +308,7 @@ export default {
           },
         };
 
-        // Submit to material-modifieds API
+        // Submit to the material-modifieds API
         const materialModifiedResponse = await axios.post(
           "http://localhost:1337/api/material-modifieds",
           materialModifiedPayload

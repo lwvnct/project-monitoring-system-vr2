@@ -151,11 +151,11 @@
                     </td>
                     <td>{{ material.material }}</td>
                     <td>{{ material.quantity }}</td>
-                    <td>{{ material.remaining }}</td>
+                    <td>{{ material.remainingquantity }}</td>
                     <td>{{ material.unit }}</td>
                     <td>{{ material.price }}</td>
                     <td>{{ formatNumber(material.quantity * material.price) }}</td>
-                    <td>{{ material.remaining }}</td>
+                    <td>{{ material.remainingsubtotal }}</td>
                   </tr>
                   <tr v-if="getMaterialModifieds(section.id, item.itemno).length === 0">
                     <td colspan="8">No materials available</td>
@@ -372,7 +372,11 @@ export default {
         modItem => modItem.itemno === itemno
       );
       return modifiedItem && modifiedItem.material_modifieds
-        ? modifiedItem.material_modifieds
+        ? modifiedItem.material_modifieds.map(material => ({
+            ...material,
+            remainingquantity: material.quantity,      // New property mapped from quantity
+            remainingsubtotal: material.subtotal         // New property mapped from subtotal
+          }))
         : [];
     },
     toggleMaterialDetails(sectionId, itemno) {
@@ -469,9 +473,9 @@ export default {
 
 <style scoped>
 .table-container {
-  width: 100%; /* Adjusted width to 100% */
+  width: 100%;
   margin: 0 auto;
-  padding: 0 10px; /* Reduced padding */
+  padding: 0 10px;
   overflow-x: auto;
 }
 
@@ -479,15 +483,15 @@ table {
   width: 100%;
   background-color: #ffffff;
   border-collapse: collapse;
-  table-layout: fixed; /* Added table-layout fixed */
+  table-layout: fixed;
 }
 
 th,
 td {
   padding: 4px;
   text-align: center;
-  font-size: 12px; /* Reduced font size */
-  word-wrap: break-word; /* Added word-wrap */
+  font-size: 12px;
+  word-wrap: break-word;
 }
 
 th {
@@ -496,16 +500,16 @@ th {
 
 .table-header {
   background-color: rgb(239, 213, 40);
-  font-size: 16px; /* Reduced font size */
+  font-size: 16px;
   font-weight: bold;
   text-align: center;
-  padding: 8px; /* Reduced padding */
+  padding: 8px;
 }
 
 .project-info {
   font-weight: normal;
-  font-size: 10px; /* Reduced font size */
-  padding: 6px; /* Reduced padding */
+  font-size: 10px;
+  padding: 6px;
 }
 
 .font-weight-bold {
@@ -523,22 +527,22 @@ th {
 
 .redirect-btn {
   background: #012b86;
-  margin-left: 50px; /* Reduced margin */
-  margin-top: 8px; /* Reduced margin */
-  padding: 8px; /* Reduced padding */
+  margin-left: 50px;
+  margin-top: 8px;
+  padding: 8px;
   border-radius: 5px;
   color: white;
-  font-size: 12px; /* Reduced font size */
+  font-size: 12px;
 }
 
 .download-btn {
   background: #ff0000;
-  margin-left: 8px; /* Reduced margin */
-  margin-top: 8px; /* Reduced margin */
-  padding: 8px; /* Reduced padding */
+  margin-left: 8px;
+  margin-top: 8px;
+  padding: 8px;
   border-radius: 5px;
   color: white;
-  font-size: 12px; /* Reduced font size */
+  font-size: 12px;
 }
 
 .pdf-table {
@@ -552,7 +556,7 @@ th {
 
 .header-image {
   width: 100%;
-  height: 140px; /* Reduced height */
+  height: 140px;
   padding-left: 10px;
   padding-right: 10px;
   background-color: #ffffff;
@@ -568,7 +572,7 @@ th {
 .material-table td {
   padding: 4px;
   border: 1px solid #ccc;
-  font-size: 11px; /* Reduced font size */
+  font-size: 11px;
 }
 
 .workers-table {
@@ -579,9 +583,9 @@ th {
 
 .workers-table th,
 .workers-table td {
-  padding: 6px; /* Reduced padding */
+  padding: 6px;
   border: 1px solid #ddd;
-  font-size: 12px; /* Reduced font size */
+  font-size: 12px;
   text-align: center;
 }
 </style>
