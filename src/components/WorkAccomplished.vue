@@ -135,6 +135,7 @@
                     <th>Price</th>
                     <th>Material Cost</th>
                     <th>Remaining</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -144,8 +145,8 @@
                   >
                     <td style="width: 100px;">
                       <input
-                        type="text"
-                        v-model="material.inputField"
+                        type="number"
+                        v-model.number="material.inputField"
                         placeholder="Enter value"
                       />
                     </td>
@@ -156,15 +157,25 @@
                     <td>{{ material.price }}</td>
                     <td>{{ formatNumber(material.quantity * material.price) }}</td>
                     <td>{{ material.remainingsubtotal }}</td>
+                    <td>
+                      <button @click="updateMaterial(material)">Update</button>
+                    </td>
                   </tr>
                   <tr v-if="getMaterialModifieds(section.id, item.itemno).length === 0">
-                    <td colspan="8">No materials available</td>
+                    <td colspan="9">No materials available</td>
                   </tr>
                   <tr>
                     <td colspan="6" class="font-weight-bold">Sub-total</td>
                     <td class="font-weight-bold">
-                      {{ formatNumber(getMaterialModifieds(section.id, item.itemno).reduce((sum, material) => sum + (material.quantity * material.price), 0)) }}
+                      {{ formatNumber(
+                          getMaterialModifieds(section.id, item.itemno).reduce(
+                            (sum, material) =>
+                              sum + material.quantity * material.price,
+                            0
+                          )
+                        ) }}
                     </td>
+                    <td></td>
                     <td></td>
                   </tr>
                 </tbody>
@@ -173,19 +184,18 @@
           </tr>
         </tbody>
         <tfoot>
-          <!-- <tr class="font-weight-bold bg-light"> -->
-            <!-- Adjusted colspan to span first 9 columns (ITEM NO., DESCRIPTION and ORIGINAL CONTRACT) -->
-            <!-- <td colspan="9">TOTAL</td> -->
-            <!-- You may update the following cells as needed to show your totals -->
-            <!-- <td>{{ formatNumber(totalAmount) }}</td>
-            <td>{{ formatNumber(totalWtPercent) }}</td> -->
-            <!-- Adjusted colspan to match remaining WORK ACCOMPLISHED columns -->
-            <!-- <td colspan="8"></td>
+          <!--
+          <tr class="font-weight-bold bg-light">
+            <td colspan="9">TOTAL</td>
+            <td>{{ formatNumber(totalAmount) }}</td>
+            <td>{{ formatNumber(totalWtPercent) }}</td>
+            <td colspan="8"></td>
             <td>{{ formatNumber(totalPreviousAmount) }}</td>
             <td>{{ formatNumber(totalTotalAmount) }}</td>
             <td>{{ formatNumber(totalPrevPercentage) }}%</td>
             <td>{{ formatNumber(totalPrevPercentage) }}%</td>
-          </tr> -->
+          </tr>
+          -->
           <tr @click="toggleProjectWorkers" style="cursor: pointer; background: #f0f0f0;">
             <td colspan="26">
               <strong>Project Workers (click to toggle)</strong>
@@ -371,13 +381,20 @@ export default {
       const modifiedItem = section.project_item_modifieds.find(
         modItem => modItem.itemno === itemno
       );
-      return modifiedItem && modifiedItem.material_modifieds
-        ? modifiedItem.material_modifieds.map(material => ({
-            ...material,
-            remainingquantity: material.quantity,      // New property mapped from quantity
-            remainingsubtotal: material.subtotal         // New property mapped from subtotal
-          }))
-        : [];
+      if (!modifiedItem || !modifiedItem.material_modifieds) return [];
+      // Ensure each material has reactive properties added.
+      modifiedItem.material_modifieds.forEach(material => {
+        if (material.inputField === undefined) {
+          this.$set(material, 'inputField', 0);
+        }
+        if (material.remainingquantity === undefined) {
+          this.$set(material, 'remainingquantity', material.quantity);
+        }
+        if (material.remainingsubtotal === undefined) {
+          this.$set(material, 'remainingsubtotal', material.subtotal);
+        }
+      });
+      return modifiedItem.material_modifieds;
     },
     toggleMaterialDetails(sectionId, itemno) {
       const key = `${sectionId}-${itemno}`;
@@ -453,6 +470,46 @@ export default {
     },
     getLaborCost() {
       return this.projectWorkers.reduce((sum, worker) => sum + (worker.ratePerDay * worker.days), 0);
+    },
+    async updateMaterial(material) {
+      // Debug log to see what inputField contains.
+      console.log("Input value:", material.inputField);
+      const inputVal = parseFloat(material.inputField);
+      if (isNaN(inputVal) || inputVal <= 0) {
+        alert("Please enter a valid positive number.");
+        return;
+      }
+      // Calculate new remaining values.
+      const newRemainingQuantity = parseFloat(material.remainingquantity) - inputVal;
+      const newRemainingSubtotal = parseFloat(material.remainingsubtotal) - (inputVal * parseFloat(material.price));
+      try {
+        // Retrieve the record from Strapi using documentId.
+        const getRes = await axios.get(
+          `http://localhost:1337/api/material-modifieds?populate=*&filters[documentId][$eq]=${material.documentId}`
+        );
+        if (getRes.data && getRes.data.data && getRes.data.data.length > 0) {
+          const record = getRes.data.data[0];
+          // PUT update the record using its id instead of documentId.
+          await axios.put(
+            `http://localhost:1337/api/material-modifieds/${record.documentId}`,
+            {
+              data: {
+                quantity: newRemainingQuantity,
+                subtotal: newRemainingSubtotal
+              }
+            }
+          );
+          // Update the local object so that the UI reflects the new values.
+          material.remainingquantity = newRemainingQuantity;
+          material.remainingsubtotal = newRemainingSubtotal;
+          alert("Material updated successfully!");
+        } else {
+          alert("Material record not found.");
+        }
+      } catch (error) {
+        console.error("Error updating material:", error);
+        alert("Update failed. Please try again.");
+      }
     }
   },
   mounted() {
