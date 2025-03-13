@@ -3,171 +3,221 @@
     <button @click="redirectToViewWeeklyProgressReport" class="redirect-btn">
       View Weekly Progress Report
     </button>
-    <!-- <button class="red-btn" onclick="window.print()">Print this page</button> -->
-    <!-- New Download button -->
     <button @click="downloadPDF" class="download-btn">
       Download as PDF
     </button>
-    <table ref="pdfTable" border="1" class="mx-auto my-5 pdf-table">
-      <!-- New thead for the image -->
-      <thead>
-        <tr>
-          <th colspan="14">
-            <img src="@/assets/h0.png" alt="Header Image" class="header-image">
-          </th>
-        </tr>
-      </thead>
-      <thead>
-        <tr>
-          <th colspan="14" class="table-header">Project Details</th>
-        </tr>
-        <!-- New row for displaying project info -->
-        <tr v-if="sections.length && sections[0].project">
-          <td colspan="14" class="project-info">
-            <strong>Project Name:</strong> {{ sections[0].project.projectName }} |
-            <strong>Project Location:</strong> {{ sections[0].project.projectLocation }} |
-            <strong>Project Sourcefund:</strong> {{ sections[0].project.sourceOfFund }}  <br>
-            <strong>Start Date:</strong> {{ sections[0].project.startDate }} |
-            <strong>Due Date:</strong> {{ sections[0].project.dueDate }}
-          </td>
-        </tr>
-        <tr>
-          <th rowspan="2">ITEM NO.</th>
-          <th rowspan="2">DESCRIPTION</th>
-          <th colspan="5">ORIGINAL CONTRACT</th>
-          <th colspan="5">WORK ACCOMPLISHED</th>
-          <th colspan="2">WEIGHTED % ACCOMP</th>
-        </tr>
-        <tr>
-          <th>QTY</th>
-          <th>UNIT</th>
-          <th>UNIT COST</th>
-          <th>AMOUNT</th>
-          <th>WT.%</th>
-          <th>Previous QTY</th>
-          <th>Previous AMOUNT</th>
-          <th>REMAINING QUANTITY</th>
-          <th>TOTAL AMOUNT</th>
-          <th>BALANCE</th>
-          <th>PREV PERCENTAGE</th>
-          <th>TOTAL</th>
-        </tr>
-      </thead>
-      <!-- Iterate over sections with a separate tbody per section -->
-      <tbody v-for="section in sections" :key="section.id">
-        <tr>
-          <td colspan="14" class="font-weight-bold">
-            {{ section.letter_label_for_item_no }}
-          </td>
-        </tr>
-        <!-- Display the header for the section -->
-        <tr>
-          <td colspan="14" class="font-weight-bold">
-            {{ section.header_per_project_section }}
-          </td>
-        </tr>
-        <!-- Display the progress bar for the section using computed progress percentage -->
-        <tr>
-          <td colspan="14">
-            <v-progress-linear
-              :value="getProgressPercentage(section)"
-              :color="getProgressColor(getSumWtPercent(section), getSectionTotalWt(section))"
-              height="20"
-              striped
-            >
-              <template v-slot:default>
-                <strong>{{ formatDecimal(getSumWtPercent(section)) }}/{{ formatDecimal(getSectionTotalWt(section)) }}</strong>
-              </template>
-            </v-progress-linear>
-          </td>
-        </tr>
-        <tr>
-          <td colspan="14" class="font-italic">
-            {{ section.mainDescription }}
-          </td>
-        </tr>
-        <!-- Main item rows -->
-        <tr v-for="item in section.items" :key="'item-' + item.id">
-          <td>{{ item.itemno }}</td>
-          <!-- Added click event and cursor style for toggling material details -->
-          <td @click="toggleMaterialDetails(section.id, item.itemno)" style="cursor: pointer;">
-            {{ item.subDescription }}
-          </td>
-          <td>{{ formatNumber(item.quantity) }}</td>
-          <td>{{ item.unit }}</td>
-          <td>{{ formatNumber(item.unitCost) }}</td>
-          <td>{{ formatNumber(item.amount) }}</td>
-          <td>{{ formatNumber(item.wt_percent) }}</td>
-          <!-- Previous QTY from P_EnteredQuantity -->
-          <td>{{ formatNumber(getPreviousQty(section.id, item.itemno)) }}</td>
-          <!-- Previous AMOUNT as previous qty * unit cost -->
-          <td>{{ formatNumber(calculatePreviousAmount(section.id, item)) }}</td>
-          <!-- REMAINING QUANTITY from project_item_modifieds -->
-          <td>{{ formatNumber(getModifiedQuantity(section.id, item.itemno)) }}</td>
-          <!-- TOTAL AMOUNT computed as P_EnteredQuantity * unitCost -->
-          <td>{{ formatNumber(getTotalAmount(section.id, item.itemno)) }}</td>
-          <!-- BALANCE displays the updated "amount" from project_item_modifieds -->
-          <td>{{ formatNumber(getModifiedAmount(section.id, item.itemno)) }}</td>
-          <!-- PREV PERCENTAGE displays the value of P_EnteredQuantity -->
-          <td>{{ formatNumber(getPreviousPercentage(section.id, item.itemno)) }}%</td>
-          <td>{{ formatNumber(getPreviousPercentage(section.id, item.itemno)) }}%</td>
-        </tr>
-        <!-- New row: Show material_modifieds details for expanded items -->
-        <tr
-          v-for="item in section.items.filter(i => expandedItems[`${section.id}-${i.itemno}`])"
-          :key="'material-details-' + item.id"
-        >
-          <td colspan="14">
-            <table class="material-table" border="1">
-              <thead>
-                <tr>
-                  <th>Material</th>
-                  <th>Quantity</th>
-                  <th>Unit</th>
-                  <th>Price</th>
-                  <th>Material Cost</th> <!-- New column header -->
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="(material, index) in getMaterialModifieds(section.id, item.itemno)"
-                  :key="'material-' + index"
-                >
-                  <td>{{ material.material }}</td>
-                  <td>{{ material.quantity }}</td>
-                  <td>{{ material.unit }}</td>
-                  <td>{{ material.price }}</td>
-                  <td>{{ formatNumber(material.quantity * material.price) }}</td> <!-- New column content -->
-                </tr>
-                <tr v-if="getMaterialModifieds(section.id, item.itemno).length === 0">
-                  <td colspan="5">No materials available</td> <!-- Adjust colspan to 5 -->
-                </tr>
-                <!-- New row for sub-total -->
-                <tr>
-                  <td colspan="4" class="font-weight-bold">Sub-total</td>
-                  <td class="font-weight-bold">{{ formatNumber(getMaterialModifieds(section.id, item.itemno).reduce((sum, material) => sum + (material.quantity * material.price), 0)) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </td>
-        </tr>
-      </tbody>
-      <!-- TOTAL Row -->
-      <tfoot>
-        <tr class="font-weight-bold bg-light">
-          <td colspan="5">TOTAL</td>
-          <td>{{ formatNumber(totalAmount) }}</td>
-          <td>{{ formatNumber(totalWtPercent) }}</td>
-          <td></td>
-          <td>{{ formatNumber(totalPreviousAmount) }}</td>
-          <td></td>
-          <td>{{ formatNumber(totalTotalAmount) }}</td>
-          <td></td>
-          <td>{{ formatNumber(totalPrevPercentage) }}%</td>
-          <td>{{ formatNumber(totalPrevPercentage) }}%</td>
-        </tr>
-      </tfoot>
-    </table>
+    <!-- Responsive container with side margins -->
+    <div class="table-container">
+      <table ref="pdfTable" border="1" class="mx-auto my-5 pdf-table">
+        <thead>
+          <tr>
+            <!-- Updated colspan from 22 to 26 -->
+            <th colspan="26">
+              <img src="@/assets/h0.png" alt="Header Image" class="header-image">
+            </th>
+          </tr>
+        </thead>
+        <thead>
+          <tr>
+            <th rowspan="2">ITEM NO.</th>
+            <th rowspan="2">DESCRIPTION</th>
+            <th colspan="7">ORIGINAL CONTRACT</th>
+            <!-- Updated colspan: previously 14, now 17 columns for WORK ACCOMPLISHED -->
+            <th colspan="17">WORK ACCOMPLISHED</th>
+          </tr>
+          <tr>
+            <!-- ORIGINAL CONTRACT columns -->
+            <th>QTY</th>
+            <th>UNIT</th>
+            <th>UNIT COST</th>
+            <th>MATERIAL</th>
+            <th>LABOR</th>
+            <th>AMOUNT</th>
+            <th>WT.%</th>
+            <!-- WORK ACCOMPLISHED columns -->
+            <th>PREVIOS MATERIAL</th>
+            <th>PRESENT MATERIAL</th>
+            <th>REMAINING MATERIAL</th>
+            <th>PREVIOS LABOR</th>
+            <th>PRESENT LABOR</th>
+            <th>REMAINING LABOR</th>
+            <!-- New columns inserted between REMAINING LABOR and Previous QTY -->
+            <th>PREVIOUS</th>
+            <th>ACTUAL MATERIALS</th>
+            <th>REMAINING</th>
+            <th>RESEREVE</th>
+            <!-- Existing columns shifted accordingly -->
+            <th>Previous QTY</th>
+            <th>Previous AMOUNT</th>
+            <th>REMAINING QUANTITY</th>
+            <th>TOTAL AMOUNT</th>
+            <th>BALANCE</th>
+            <th>PREV PERCENTAGE</th>
+            <th>WEIGHTED % ACCOMP</th>
+          </tr>
+        </thead>
+        <tbody v-for="section in sections" :key="section.id">
+          <tr>
+            <td colspan="26" class="font-weight-bold">
+              {{ section.letter_label_for_item_no }}
+            </td>
+          </tr>
+          <tr>
+            <td colspan="26" class="font-weight-bold">
+              {{ section.header_per_project_section }}
+            </td>
+          </tr>
+          <tr>
+            <td colspan="26">
+              <v-progress-linear
+                :value="getProgressPercentage(section)"
+                :color="getProgressColor(getSumWtPercent(section), getSectionTotalWt(section))"
+                height="20"
+                striped
+              >
+                <template v-slot:default>
+                  <strong>{{ formatDecimal(getSumWtPercent(section)) }}/{{ formatDecimal(getSectionTotalWt(section)) }}</strong>
+                </template>
+              </v-progress-linear>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="26" class="font-italic">
+              {{ section.mainDescription }}
+            </td>
+          </tr>
+          <tr v-for="item in section.items" :key="'item-' + item.id">
+            <td>{{ item.itemno }}</td>
+            <td @click="toggleMaterialDetails(section.id, item.itemno)" style="cursor: pointer;">
+              {{ item.subDescription }}
+            </td>
+            <td>{{ formatNumber(getTotalMaterialQuantity(section.id, item.itemno)) }}</td>
+            <td>{{ item.unit }}</td>
+            <td>{{ formatNumber(item.unitCost) }}</td>
+            <td>{{ formatNumber(getMaterialCost(section.id, item.itemno)) }}</td>
+            <td>{{ formatNumber(getLaborCost()) }}</td>
+            <td>{{ formatNumber(getTotalAmount(section.id, item.itemno)) }}</td>
+            <td>{{ formatNumber(item.wt_percent) }}</td>
+            <!-- New columns (existing ones for materials and labor) -->
+            <td>{{ formatNumber(item.previousMaterial) }}</td>
+            <td>{{ formatNumber(item.presentMaterial) }}</td>
+            <td>{{ formatNumber(item.remainingMaterial) }}</td>
+            <td>{{ formatNumber(item.previousLabor) }}</td>
+            <td>{{ formatNumber(item.presentLabor) }}</td>
+            <td>{{ formatNumber(item.remainingLabor) }}</td>
+            <!-- New columns added for table structure -->
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <!-- Existing columns shifted accordingly -->
+            <td>{{ formatNumber(getPreviousQty(section.id, item.itemno)) }}</td>
+            <td>{{ formatNumber(calculatePreviousAmount(section.id, item)) }}</td>
+            <td>{{ formatNumber(getModifiedQuantity(section.id, item.itemno)) }}</td>
+            <td>{{ formatNumber(getTotalAmount(section.id, item.itemno)) }}</td>
+            <td>{{ formatNumber(getModifiedAmount(section.id, item.itemno)) }}</td>
+            <td>{{ formatNumber(getPreviousPercentage(section.id, item.itemno)) }}%</td>
+            <td>{{ formatNumber(getPreviousPercentage(section.id, item.itemno)) }}%</td>
+          </tr>
+          <tr
+            v-for="item in section.items.filter(i => expandedItems[`${section.id}-${i.itemno}`])"
+            :key="'material-details-' + item.id"
+          >
+            <td colspan="26">
+              <table class="material-table" border="1">
+                <thead>
+                  <tr>
+                    <!-- Removed Input column -->
+                    <th>Material</th>
+                    <th>Quantity</th>
+                    <th>Remaining</th>
+                    <th>Unit</th>
+                    <th>Price</th>
+                    <th>Material Cost</th>
+                    <th>Remaining</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="(material, index) in getMaterialModifieds(section.id, item.itemno)"
+                    :key="'material-' + index"
+                  >
+                    <!-- Removed Input column -->
+                    <td>{{ material.material }}</td>
+                    <td>{{ material.quantity }}</td>
+                    <td>{{ material.remaining }}</td>
+                    <td>{{ material.unit }}</td>
+                    <td>{{ material.price }}</td>
+                    <td>{{ formatNumber(material.quantity * material.price) }}</td>
+                    <td>{{ material.remaining }}</td>
+                  </tr>
+                  <tr v-if="getMaterialModifieds(section.id, item.itemno).length === 0">
+                    <td colspan="8">No materials available</td>
+                  </tr>
+                  <tr>
+                    <td colspan="5" class="font-weight-bold">Sub-total</td>
+                    <td class="font-weight-bold">
+                      {{ formatNumber(getMaterialModifieds(section.id, item.itemno).reduce((sum, material) => sum + (material.quantity * material.price), 0)) }}
+                    </td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr class="font-weight-bold bg-light">
+            <!-- Adjusted colspan to span first 9 columns (ITEM NO., DESCRIPTION and ORIGINAL CONTRACT) -->
+            <td colspan="9">TOTAL</td>
+            <!-- You may update the following cells as needed to show your totals -->
+            <td>{{ formatNumber(totalAmount) }}</td>
+            <td>{{ formatNumber(totalWtPercent) }}</td>
+            <!-- Adjusted colspan to match remaining WORK ACCOMPLISHED columns -->
+            <td colspan="8"></td>
+            <td>{{ formatNumber(totalPreviousAmount) }}</td>
+            <td>{{ formatNumber(totalTotalAmount) }}</td>
+            <td>{{ formatNumber(totalPrevPercentage) }}%</td>
+            <td>{{ formatNumber(totalPrevPercentage) }}%</td>
+          </tr>
+          <tr @click="toggleProjectWorkers" style="cursor: pointer; background: #f0f0f0;">
+            <td colspan="26">
+              <strong>Project Workers (click to toggle)</strong>
+            </td>
+          </tr>
+          <tr v-if="showProjectWorkers">
+            <td colspan="26">
+              <table class="workers-table" border="1">
+                <thead>
+                  <tr>
+                    <th>Labor Requirements</th>
+                    <th>Name</th>
+                    <th>Manpower</th>
+                    <th>Days</th>
+                    <th>Rate Per Day</th>
+                    <th>Labor Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="worker in projectWorkers" :key="worker.id">
+                    <td>{{ worker.laborRequirments }}</td>
+                    <td>{{ worker.name }}</td>
+                    <td>{{ worker.manpower }}</td>
+                    <td>{{ worker.days }}</td>
+                    <td>{{ worker.ratePerDay }}</td>
+                    <td>{{ formatNumber(worker.ratePerDay * worker.days) }}</td>
+                  </tr>
+                  <tr class="font-weight-bold">
+                    <td colspan="5">Subtotal Labor Cost</td>
+                    <td>{{ formatNumber(totalLaborCost) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   </div>
 </template>
 
@@ -182,8 +232,9 @@ export default {
     return {
       sections: [],
       projectItemModifieds: [],
-      // New property to track expanded rows for material details
-      expandedItems: {}
+      expandedItems: {},
+      projectWorkers: [],
+      showProjectWorkers: false
     };
   },
   computed: {
@@ -213,6 +264,11 @@ export default {
       return this.sections.reduce((sum, section) => {
         return sum + section.items.reduce((acc, item) => acc + parseFloat(this.getPreviousPercentage(section.id, item.itemno)), 0);
       }, 0);
+    },
+    totalLaborCost() {
+      return this.projectWorkers.reduce((sum, worker) => {
+        return sum + (worker.ratePerDay * worker.days);
+      }, 0);
     }
   },
   methods: {
@@ -237,6 +293,20 @@ export default {
         }
       } catch (error) {
         console.error('Error fetching project item modifieds:', error);
+      }
+    },
+    async fetchProjectWorkers() {
+      const documentId = this.$route.params.documentId;
+      try {
+        const response = await axios.get("http://localhost:1337/api/projects?populate=*");
+        if (response.data && response.data.data) {
+          const project = response.data.data.find(p => p.documentId === documentId);
+          if (project && project.project_workers) {
+            this.projectWorkers = project.project_workers;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching project workers:', error);
       }
     },
     updateProjectItemModifiedAmounts() {
@@ -284,14 +354,11 @@ export default {
       return modifiedItem ? parseFloat(modifiedItem.p_wt_percent) || 0 : 0;
     },
     getTotalAmount(sectionId, itemno) {
-      const section = this.sections.find(sec => sec.id === sectionId);
-      if (!section || !section.project_item_modifieds) return 0;
-      const modifiedItem = section.project_item_modifieds.find(
-        modItem => modItem.itemno === itemno
-      );
-      return modifiedItem ? parseFloat(modifiedItem.totalAmount) || 0 : 0;
+      const materials = this.getMaterialModifieds(sectionId, itemno);
+      const materialCost = materials.reduce((sum, material) => sum + (material.quantity * material.price), 0);
+      const laborCost = this.projectWorkers.reduce((sum, worker) => sum + (worker.ratePerDay * worker.days), 0);
+      return materialCost + laborCost;
     },
-    // New method to get material_modifieds for a specific item
     getMaterialModifieds(sectionId, itemno) {
       const section = this.sections.find(sec => sec.id === sectionId);
       if (!section || !section.project_item_modifieds) return [];
@@ -302,18 +369,22 @@ export default {
         ? modifiedItem.material_modifieds
         : [];
     },
-    // New method to toggle display of material details
     toggleMaterialDetails(sectionId, itemno) {
       const key = `${sectionId}-${itemno}`;
       this.$set(this.expandedItems, key, !this.expandedItems[key]);
     },
+    toggleProjectWorkers() {
+      this.showProjectWorkers = !this.showProjectWorkers;
+    },
     formatDecimal(value) {
-      if (value === null || value === undefined || isNaN(value)) return '0.00';
-      return parseFloat(value).toFixed(2);
+      if (value === null || value === undefined || isNaN(value)) return '0';
+      const formattedValue = parseFloat(value).toFixed(2);
+      return formattedValue.endsWith('.00') ? parseInt(formattedValue).toString() : formattedValue;
     },
     formatNumber(value) {
-      if (value === null || value === undefined || isNaN(value)) return '0.00';
-      return parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      if (value === null || value === undefined || isNaN(value)) return '0';
+      const formattedValue = parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return formattedValue.endsWith('.00') ? formattedValue.slice(0, -3) : formattedValue;
     },
     redirectToViewWeeklyProgressReport() {
       const documentId = this.$route.params.documentId;
@@ -341,133 +412,172 @@ export default {
       if (progress < total * 0.7) return 'orange';
       return 'green';
     },
-    // New method: compute progress percentage for the progress bar.
     getProgressPercentage(section) {
       const total = this.getSectionTotalWt(section);
       if (total === 0) return 0;
       return (this.getSumWtPercent(section) / total) * 100;
     },
-    // New method: capture the table, reserve a header space for timestamp, and generate a PDF.
     downloadPDF() {
-      const margin = 20; // margin in points
-      const headerMargin = 30; // space reserved at the top for the timestamp
+      const margin = 20;
+      const headerMargin = 30;
       const tableElement = this.$refs.pdfTable;
       html2canvas(tableElement, { useCORS: true }).then(canvas => {
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'pt', 'a4');
-        // Calculate available width after margins
         const pdfWidth = pdf.internal.pageSize.getWidth() - 2 * margin;
-        // Maintain the aspect ratio of the canvas image
         const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-        // Get the current date/time and format it
         const now = new Date();
         const timestamp = now.toLocaleString();
         pdf.setFontSize(10);
-        // Place the timestamp in the reserved header area (at top left)
         pdf.text(`Created on: ${timestamp}`, margin, margin + (headerMargin / 2));
-        // Add the table image starting below the header
         pdf.addImage(imgData, 'PNG', margin, margin + headerMargin, pdfWidth, pdfHeight);
         pdf.save('project-details.pdf');
       });
+    },
+    getTotalMaterialQuantity(sectionId, itemno) {
+      const materials = this.getMaterialModifieds(sectionId, itemno);
+      return materials.reduce((sum, material) => sum + parseFloat(material.quantity || 0), 0);
+    },
+    getMaterialCost(sectionId, itemno) {
+      const materials = this.getMaterialModifieds(sectionId, itemno);
+      return materials.reduce((sum, material) => sum + (material.quantity * material.price), 0);
+    },
+    getLaborCost() {
+      return this.projectWorkers.reduce((sum, worker) => sum + (worker.ratePerDay * worker.days), 0);
     }
   },
   mounted() {
-    Promise.all([this.fetchData(), this.fetchProjectItemModifieds()])
+    Promise.all([
+      this.fetchData(),
+      this.fetchProjectItemModifieds(),
+      this.fetchProjectWorkers()
+    ])
       .then(() => {
         this.updateProjectItemModifiedAmounts();
       })
       .catch(error => {
         console.error('Error in mounted hook:', error);
       });
-  },
+  }
 };
 </script>
 
 <style scoped>
+.table-container {
+  width: 100%; /* Adjusted width to 100% */
+  margin: 0 auto;
+  padding: 0 10px; /* Reduced padding */
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  background-color: #ffffff;
+  border-collapse: collapse;
+  table-layout: fixed; /* Added table-layout fixed */
+}
+
 th,
 td {
   padding: 4px;
   text-align: center;
-  font-size: 15px;
+  font-size: 12px; /* Reduced font size */
+  word-wrap: break-word; /* Added word-wrap */
 }
+
 th {
   background-color: #f4f4f4;
+  font-size: 10px; /* Reduced font size */
 }
-table {
-  background-color: #ffffff;
-  max-width: 90%;
-  margin: auto;
-  border-collapse: collapse;
-}
+
 .table-header {
   background-color: rgb(239, 213, 40);
-  font-size: 20px;
+  font-size: 16px; /* Reduced font size */
   font-weight: bold;
   text-align: center;
-  padding: 10px;
+  padding: 8px; /* Reduced padding */
 }
+
 .project-info {
-  /* background-color: #e0e0e0; */
   font-weight: normal;
-  font-size: 16px;
-  padding: 8px;
+  font-size: 10px; /* Reduced font size */
+  padding: 6px; /* Reduced padding */
 }
+
 .font-weight-bold {
   font-weight: bold;
   background-color: #e0e0e0;
 }
+
 .font-italic {
   font-style: italic;
 }
+
 .bg-light {
   background-color: #f8f9fa;
 }
+
 .redirect-btn {
   background: #012b86;
-  margin-left: 63px;
-  margin-top: 10px;
-  padding: 10px;
+  margin-left: 50px; /* Reduced margin */
+  margin-top: 8px; /* Reduced margin */
+  padding: 8px; /* Reduced padding */
   border-radius: 5px;
   color: white;
+  font-size: 12px; /* Reduced font size */
 }
-/* .red-btn {
-  background: #810101;
-  margin-left: 10px;
-  margin-top: 10px;
-  padding: 10px;
-  border-radius: 5px;
-  color: white;
-} */
-/* Styling for the Download button */
+
 .download-btn {
   background: #ff0000;
-  margin-left: 10px;
-  margin-top: 10px;
-  padding: 10px;
+  margin-left: 8px; /* Reduced margin */
+  margin-top: 8px; /* Reduced margin */
+  padding: 8px; /* Reduced padding */
   border-radius: 5px;
   color: white;
+  font-size: 12px; /* Reduced font size */
 }
+
 .pdf-table {
-  border: 1px solid #ddd; /* Lighter border for PDF */
+  border: 1px solid #ddd;
 }
+
 .pdf-table th,
 .pdf-table td {
-  border: 1px solid #ddd; /* Lighter border for PDF */
+  border: 1px solid #ddd;
 }
+
 .header-image {
   width: 100%;
-  height: auto;
+  height: 140px; /* Reduced height */
+  padding-left: 10px;
+  padding-right: 10px;
+  background-color: #ffffff;
 }
-/* New styling for the nested material table */
+
 .material-table {
   width: 100%;
   margin-top: 5px;
   border-collapse: collapse;
 }
+
 .material-table th,
 .material-table td {
   padding: 4px;
   border: 1px solid #ccc;
-  font-size: 14px;
+  font-size: 11px; /* Reduced font size */
+}
+
+.workers-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.workers-table th,
+.workers-table td {
+  padding: 6px; /* Reduced padding */
+  border: 1px solid #ddd;
+  font-size: 12px; /* Reduced font size */
+  text-align: center;
 }
 </style>
