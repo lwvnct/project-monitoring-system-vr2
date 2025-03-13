@@ -35,7 +35,8 @@
             <th>AMOUNT</th>
             <th>WT.%</th>
             <!-- WORK ACCOMPLISHED columns -->
-            <th>PREVIOS MATERIAL</th>
+            <!-- The next two columns now display the summed values from the API -->
+            <th>PREVIOUS MATERIAL</th>
             <th>PRESENT MATERIAL</th>
             <th>REMAINING MATERIAL</th>
             <th>PREVIOS LABOR</th>
@@ -91,33 +92,33 @@
             <td @click="toggleMaterialDetails(section.id, item.itemno)" style="cursor: pointer;">
               {{ item.subDescription }}
             </td>
-            <td>{{ formatNumber(getTotalMaterialQuantity(section.id, item.itemno)) }}</td>
+            <td>{{ formatNumberWithCommas(getMaterialModifieds(section.id, item.itemno).reduce((sum, material, index) => sum + getMaterialQuantityFromMaterials(section.id, item.itemno, index), 0)) }}</td>
             <td>{{ item.unit }}</td>
-            <td>{{ formatNumber(item.unitCost) }}</td>
-            <td>{{ formatNumber(getMaterialCost(section.id, item.itemno)) }}</td>
-            <td>{{ formatNumber(getLaborCost()) }}</td>
-            <td>{{ formatNumber(getTotalAmount(section.id, item.itemno)) }}</td>
-            <td>{{ formatNumber(item.wt_percent) }}</td>
-            <!-- New columns (existing ones for materials and labor) -->
-            <td>{{ formatNumber(item.previousMaterial) }}</td>
-            <td>{{ formatNumber(item.presentMaterial) }}</td>
-            <td>{{ formatNumber(item.remainingMaterial) }}</td>
-            <td>{{ formatNumber(item.previousLabor) }}</td>
-            <td>{{ formatNumber(item.presentLabor) }}</td>
-            <td>{{ formatNumber(item.remainingLabor) }}</td>
+            <td>{{ formatNumberWithCommas(item.unitCost) }}</td>
+            <td>{{ formatNumberWithCommas(getMaterialCost(section.id, item.itemno)) }}</td>
+            <td>{{ formatNumberWithCommas(getLaborCost()) }}</td>
+            <td>{{ formatNumberWithCommas(getMaterialCost(section.id, item.itemno) + getLaborCost()) }}</td>
+            <td>{{ formatNumberWithCommas(item.wt_percent) }}</td>
+            <!-- These two columns now display the summed values -->
+            <td>{{ formatNumberWithCommas(item.previousMaterial) }}</td>
+            <td>{{ formatNumberWithCommas(item.presentMaterial) }}</td>
+            <td>{{ formatNumberWithCommas(getRemainingMaterialSum(section.id, item.itemno)) }}</td>
+            <td>{{ formatNumberWithCommas(item.previousLabor) }}</td>
+            <td>{{ formatNumberWithCommas(item.presentLabor) }}</td>
+            <td>{{ formatNumberWithCommas(item.remainingLabor) }}</td>
             <!-- New columns added for table structure -->
             <td></td>
             <td></td>
             <td></td>
             <td></td>
             <!-- Existing columns shifted accordingly -->
-            <td>{{ formatNumber(getPreviousQty(section.id, item.itemno)) }}</td>
-            <td>{{ formatNumber(calculatePreviousAmount(section.id, item)) }}</td>
-            <td>{{ formatNumber(getModifiedQuantity(section.id, item.itemno)) }}</td>
-            <td>{{ formatNumber(getTotalAmount(section.id, item.itemno)) }}</td>
-            <td>{{ formatNumber(getModifiedAmount(section.id, item.itemno)) }}</td>
-            <td>{{ formatNumber(getPreviousPercentage(section.id, item.itemno)) }}%</td>
-            <td>{{ formatNumber(getPreviousPercentage(section.id, item.itemno)) }}%</td>
+            <td>{{ formatNumberWithCommas(getPreviousQty(section.id, item.itemno)) }}</td>
+            <td>{{ formatNumberWithCommas(calculatePreviousAmount(section.id, item)) }}</td>
+            <td>{{ formatNumberWithCommas(getModifiedQuantity(section.id, item.itemno)) }}</td>
+            <td>{{ formatNumberWithCommas(getTotalAmount(section.id, item.itemno)) }}</td>
+            <td>{{ formatNumberWithCommas(getModifiedAmount(section.id, item.itemno)) }}</td>
+            <td>{{ formatNumberWithCommas(getPreviousPercentage(section.id, item.itemno)) }}%</td>
+            <td>{{ formatNumberWithCommas(getPreviousPercentage(section.id, item.itemno)) }}%</td>
           </tr>
           <tr
             v-for="item in section.items.filter(i => expandedItems[`${section.id}-${i.itemno}`])"
@@ -129,10 +130,10 @@
                   <tr>
                     <th>Input</th>
                     <th>Material</th>
+                    <th>Unit</th>
                     <!-- Updated: now fetching quantity from the API’s “materials” array -->
                     <th>Quantity</th>
-                    <th>Remaining</th>
-                    <th>Unit</th>
+                    <th>Remaining</th> 
                     <th>Price</th>
                     <th>Material Cost</th>
                     <th>Remaining</th>
@@ -152,13 +153,13 @@
                       />
                     </td>
                     <td>{{ material.material }}</td>
-                    <!-- Use the new helper method to get the quantity from "materials" -->
-                    <td>{{ getMaterialQuantityFromMaterials(section.id, item.itemno, index) }}</td>
-                    <td>{{ material.remainingquantity }}</td>
                     <td>{{ material.unit }}</td>
-                    <td>{{ material.price }}</td>
-                    <td>{{ formatNumber(getMaterialQuantityFromMaterials(section.id, item.itemno, index) * material.price) }}</td>
-                    <td>{{ material.remainingsubtotal }}</td>
+                    <!-- Use the new helper method to get the quantity from "materials" -->
+                    <td>{{ formatNumberWithCommas(getMaterialQuantityFromMaterials(section.id, item.itemno, index)) }}</td>
+                    <td>{{ formatNumberWithCommas(material.remainingquantity) }}</td>
+                    <td>{{ formatNumberWithCommas(material.price) }}</td>
+                    <td>{{ formatNumberWithCommas(getMaterialQuantityFromMaterials(section.id, item.itemno, index) * material.price) }}</td>
+                    <td>{{ formatNumberWithCommas(material.remainingsubtotal) }}</td>
                     <td>
                       <button @click="updateMaterial(material)">Update</button>
                     </td>
@@ -169,10 +170,9 @@
                   <tr>
                     <td colspan="6" class="font-weight-bold">Sub-total</td>
                     <td class="font-weight-bold">
-                      {{ formatNumber(
+                      {{ formatNumberWithCommas(
                           getMaterialModifieds(section.id, item.itemno).reduce(
-                            (sum, material) =>
-                              sum + material.quantity * material.price,
+                            (sum, material, index) => sum + (getMaterialQuantityFromMaterials(section.id, item.itemno, index) * material.price),
                             0
                           )
                         ) }}
@@ -408,6 +408,10 @@ export default {
       if (!modifiedItem || !modifiedItem.materials) return 0;
       return modifiedItem.materials[index] ? modifiedItem.materials[index].quantity : 0;
     },
+    getRemainingMaterialSum(sectionId, itemno) {
+      const materials = this.getMaterialModifieds(sectionId, itemno);
+      return materials.reduce((sum, material) => sum + parseFloat(material.remainingquantity || 0), 0);
+    },
     toggleMaterialDetails(sectionId, itemno) {
       const key = `${sectionId}-${itemno}`;
       this.$set(this.expandedItems, key, !this.expandedItems[key]);
@@ -415,14 +419,20 @@ export default {
     toggleProjectWorkers() {
       this.showProjectWorkers = !this.showProjectWorkers;
     },
+    // Format number to 2 decimal places.
     formatDecimal(value) {
       if (value === null || value === undefined || isNaN(value)) return '0.00';
       return parseFloat(value).toFixed(2);
     },
+    // Format number to 2 decimal places.
     formatNumber(value) {
+      if (value === null || value === undefined || isNaN(value)) return '0.00';
+      return parseFloat(value).toFixed(2);
+    },
+    formatNumberWithCommas(value) {
       if (value === null || value === undefined || isNaN(value)) return '0';
-      const number = parseFloat(value);
-      return number % 1 === 0 ? number.toLocaleString() : number.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const formattedValue = parseFloat(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return formattedValue.endsWith('.00') ? formattedValue.slice(0, -3) : formattedValue;
     },
     redirectToViewWeeklyProgressReport() {
       const documentId = this.$route.params.documentId;
@@ -478,50 +488,98 @@ export default {
     },
     getMaterialCost(sectionId, itemno) {
       const materials = this.getMaterialModifieds(sectionId, itemno);
-      return materials.reduce((sum, material) => sum + (material.quantity * material.price), 0);
+      return materials.reduce((sum, material, index) => sum + (this.getMaterialQuantityFromMaterials(sectionId, itemno, index) * material.price), 0);
     },
     getLaborCost() {
       return this.projectWorkers.reduce((sum, worker) => sum + (worker.ratePerDay * worker.days), 0);
     },
     async updateMaterial(material) {
-      // Debug log to see what inputField contains.
-      console.log("Input value:", material.inputField);
-      const inputVal = parseFloat(material.inputField);
-      if (isNaN(inputVal) || inputVal <= 0) {
-        alert("Please enter a valid positive number.");
+      let inputVal = parseFloat(material.inputField);
+      if (isNaN(inputVal)) {
+        inputVal = 0;
+      }
+      if (inputVal < 0) {
+        alert("Please enter a valid non-negative number.");
         return;
       }
-      // Calculate new remaining values.
       const newRemainingQuantity = parseFloat(material.remainingquantity) - inputVal;
       const newRemainingSubtotal = parseFloat(material.remainingsubtotal) - (inputVal * parseFloat(material.price));
+      
       try {
-        // Retrieve the record from Strapi using documentId.
-        const getRes = await axios.get(
+        const getResModified = await axios.get(
           `http://localhost:1337/api/material-modifieds?populate=*&filters[documentId][$eq]=${material.documentId}`
         );
-        if (getRes.data && getRes.data.data && getRes.data.data.length > 0) {
-          const record = getRes.data.data[0];
-          // PUT update the record using its id instead of documentId.
+        if (getResModified.data && getResModified.data.data && getResModified.data.data.length > 0) {
+          const recordModified = getResModified.data.data[0];
           await axios.put(
-            `http://localhost:1337/api/material-modifieds/${record.documentId}`,
+            `http://localhost:1337/api/material-modifieds/${recordModified.documentId}`,
             {
               data: {
                 quantity: newRemainingQuantity,
-                subtotal: newRemainingSubtotal
+                subtotal: newRemainingSubtotal,
+                entered_quantity: inputVal,
+                previous_entered: inputVal
               }
             }
           );
-          // Update the local object so that the UI reflects the new values.
-          material.remainingquantity = newRemainingQuantity;
-          material.remainingsubtotal = newRemainingSubtotal;
-          alert("Material updated successfully!");
         } else {
-          alert("Material record not found.");
+          alert("Material-modified record not found.");
         }
+        
+        material.remainingquantity = newRemainingQuantity;
+        material.remainingsubtotal = newRemainingSubtotal;
+        alert("Material updated successfully!");
       } catch (error) {
         console.error("Error updating material:", error);
         alert("Update failed. Please try again.");
       }
+    },
+    async updateItemMaterialSums() {
+      for (const section of this.sections) {
+        for (const item of section.items) {
+          let sumEntered = 0;
+          let sumPrevious = 0;
+          const materials = this.getMaterialModifieds(section.id, item.itemno);
+          for (const material of materials) {
+            try {
+              const response = await axios.get(
+                `http://localhost:1337/api/material-modifieds?populate=*&filters[documentId][$eq]=${material.documentId}`
+              );
+              if (response.data && response.data.data) {
+                response.data.data.forEach(record => {
+                  sumEntered += Number(record.entered_quantity) || 0;
+                  sumPrevious += Number(record.previous_entered) || 0;
+                });
+              }
+            } catch (error) {
+              console.error("Error fetching material sums for documentId", material.documentId, error);
+            }
+          }
+          this.$set(item, 'presentMaterial', sumEntered);
+          this.$set(item, 'previousMaterial', sumPrevious);
+        }
+      }
+    },
+    // New method to update weight percentage based on material count.
+    updateWeightPercent() {
+      let globalMaterialCount = 0;
+      // Count the total number of material rows.
+      this.sections.forEach(section => {
+        section.items.forEach(item => {
+          const localMaterialCount = this.getMaterialModifieds(section.id, item.itemno).length;
+          globalMaterialCount += localMaterialCount;
+        });
+      });
+      if (globalMaterialCount === 0) return;
+      const factor = 100 / globalMaterialCount;
+      // Update each item's wt_percent based on its material count.
+      this.sections.forEach(section => {
+        section.items.forEach(item => {
+          const localMaterialCount = this.getMaterialModifieds(section.id, item.itemno).length;
+          const newWtPercent = factor * localMaterialCount;
+          this.$set(item, 'wt_percent', newWtPercent);
+        });
+      });
     }
   },
   mounted() {
@@ -532,6 +590,8 @@ export default {
     ])
       .then(() => {
         this.updateProjectItemModifiedAmounts();
+        this.updateItemMaterialSums();
+        this.updateWeightPercent();
       })
       .catch(error => {
         console.error('Error in mounted hook:', error);
